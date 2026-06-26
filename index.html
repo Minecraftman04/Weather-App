@@ -1,0 +1,999 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Static GitHub Pages weather dashboard with surface forecast and winds aloft up to 3000 m AGL." />
+  <title>Weather + Winds Aloft</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #07111f;
+      --panel: rgba(255, 255, 255, 0.075);
+      --panel-strong: rgba(255, 255, 255, 0.12);
+      --border: rgba(255, 255, 255, 0.16);
+      --text: #eef6ff;
+      --muted: #9fb0c5;
+      --accent: #6dd3ff;
+      --accent-2: #9effb7;
+      --warn: #ffd166;
+      --bad: #ff8a8a;
+      --shadow: 0 20px 70px rgba(0, 0, 0, 0.35);
+      --radius: 22px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(109, 211, 255, 0.18), transparent 34rem),
+        radial-gradient(circle at 80% 10%, rgba(158, 255, 183, 0.10), transparent 25rem),
+        var(--bg);
+      color: var(--text);
+    }
+
+    a { color: var(--accent); }
+    button, input, select { font: inherit; }
+
+    .wrap {
+      width: min(1280px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 28px 0 42px;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 20px;
+      align-items: end;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 5vw, 4.4rem);
+      line-height: 0.95;
+      letter-spacing: -0.07em;
+      margin: 0 0 10px;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      max-width: 70ch;
+      font-size: 1.02rem;
+    }
+
+    .searchPanel, .card, .notice {
+      background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.055));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+    }
+
+    .searchPanel {
+      padding: 16px;
+    }
+
+    .searchGrid {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+    }
+
+    input, select {
+      width: 100%;
+      background: rgba(3, 10, 20, 0.72);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 13px;
+      outline: none;
+    }
+
+    input:focus, select:focus { border-color: rgba(109, 211, 255, 0.7); }
+
+    button {
+      border: 0;
+      border-radius: 14px;
+      padding: 12px 16px;
+      background: linear-gradient(135deg, var(--accent), #6b8cff);
+      color: #02111f;
+      cursor: pointer;
+      font-weight: 750;
+      transition: transform 120ms ease, opacity 120ms ease;
+      white-space: nowrap;
+    }
+    button:hover { transform: translateY(-1px); }
+    button:disabled { cursor: wait; opacity: 0.62; transform: none; }
+    button.secondary {
+      background: rgba(255,255,255,0.10);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    button.tiny { padding: 7px 10px; font-size: 0.88rem; }
+
+    .controls {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      align-items: end;
+    }
+    .field label {
+      display: block;
+      margin: 0 0 5px 2px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      letter-spacing: 0.02em;
+    }
+
+    .mainGrid {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .stack { display: grid; gap: 18px; }
+
+    .card { padding: 18px; }
+    .card h2, .card h3 {
+      margin: 0 0 12px;
+      letter-spacing: -0.03em;
+    }
+    .card h2 { font-size: 1.35rem; }
+    .card h3 { font-size: 1.05rem; color: var(--accent); }
+    .muted { color: var(--muted); }
+    .small { font-size: 0.9rem; }
+
+    .currentTemp {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      margin: 10px 0 8px;
+    }
+    .tempBig {
+      font-size: 4.1rem;
+      line-height: 1;
+      font-weight: 850;
+      letter-spacing: -0.08em;
+    }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .chip {
+      background: rgba(255,255,255,0.09);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 7px 10px;
+      color: #dcecff;
+      font-size: 0.9rem;
+    }
+
+    .results { display: grid; gap: 8px; margin-top: 10px; }
+    .resultBtn {
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: rgba(255,255,255,0.08);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .notice {
+      padding: 13px 15px;
+      color: #f7fbff;
+      margin: 12px 0 18px;
+      display: none;
+    }
+    .notice.show { display: block; }
+    .notice.error { border-color: rgba(255, 138, 138, 0.6); color: #ffe2e2; }
+    .notice.warn { border-color: rgba(255, 209, 102, 0.6); color: #fff3cb; }
+
+    .dailyGrid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+    }
+    .dayCard {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 12px;
+      min-height: 126px;
+    }
+    .dayTop { display:flex; justify-content: space-between; gap: 8px; align-items: center; }
+    .dayDate { color: var(--muted); font-size: 0.82rem; }
+    .dayTemp { font-size: 1.35rem; font-weight: 800; margin: 8px 0 2px; }
+
+    .tableWrap {
+      overflow: auto;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.15);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 760px;
+    }
+    th, td {
+      padding: 10px 11px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.09);
+      white-space: nowrap;
+    }
+    th {
+      position: sticky;
+      top: 0;
+      background: rgba(8, 19, 34, 0.96);
+      color: #cfe5ff;
+      z-index: 1;
+      font-size: 0.86rem;
+    }
+    tr:hover td { background: rgba(255,255,255,0.035); }
+
+    .windArrow {
+      display: inline-grid;
+      width: 26px;
+      height: 26px;
+      place-items: center;
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      margin-right: 8px;
+      background: rgba(255,255,255,0.07);
+      transform-origin: center;
+    }
+
+    .bar {
+      display: inline-block;
+      height: 7px;
+      min-width: 3px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      vertical-align: middle;
+      margin-left: 8px;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: end;
+      margin-bottom: 12px;
+    }
+    .toolbar .field { min-width: 170px; flex: 1; }
+    .toolbar .field.time { min-width: 260px; flex: 2; }
+
+    details {
+      margin-top: 14px;
+      border-top: 1px solid rgba(255,255,255,0.10);
+      padding-top: 12px;
+    }
+    summary { cursor: pointer; color: var(--accent); font-weight: 750; }
+
+    footer {
+      color: var(--muted);
+      font-size: 0.86rem;
+      margin-top: 24px;
+      line-height: 1.55;
+    }
+
+    @media (max-width: 980px) {
+      header, .mainGrid { grid-template-columns: 1fr; }
+      .controls { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 560px) {
+      .searchGrid { grid-template-columns: 1fr; }
+      .controls { grid-template-columns: 1fr; }
+      .tempBig { font-size: 3.2rem; }
+      .wrap { width: min(100% - 18px, 1280px); padding-top: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Weather + Winds Aloft</h1>
+        <p class="subtitle">A static forecast dashboard for GitHub Pages. Search a place, view current and future surface weather, then inspect winds aloft up to 3000 m AGL using ECMWF pressure-level wind data.</p>
+      </div>
+      <section class="searchPanel" aria-label="Location search">
+        <div class="searchGrid">
+          <input id="locationInput" autocomplete="off" placeholder="Bishop's Stortford, Stansted, Snowdon, 51.87,0.16..." />
+          <button id="searchBtn">Search</button>
+        </div>
+        <div class="controls">
+          <div class="field">
+            <label for="daysSelect">Forecast length</label>
+            <select id="daysSelect">
+              <option value="1">1 day</option>
+              <option value="3">3 days</option>
+              <option value="7" selected>7 days</option>
+              <option value="10">10 days</option>
+              <option value="15">15 days</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="windUnitSelect">Wind units</label>
+            <select id="windUnitSelect">
+              <option value="kt" selected>knots</option>
+              <option value="ms">m/s</option>
+              <option value="kmh">km/h</option>
+              <option value="mph">mph</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="aloftStepSelect">Aloft increment</label>
+            <select id="aloftStepSelect">
+              <option value="100">100 m interpolated</option>
+              <option value="250" selected>250 m interpolated</option>
+              <option value="500">500 m interpolated</option>
+              <option value="raw">Raw pressure levels</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <button class="secondary" id="gpsBtn" type="button">Use my GPS</button>
+          </div>
+        </div>
+        <div id="geoResults" class="results"></div>
+      </section>
+    </header>
+
+    <div id="notice" class="notice"></div>
+
+    <main class="mainGrid">
+      <section class="stack">
+        <article class="card" id="currentCard">
+          <h2>Current weather</h2>
+          <p class="muted">Search a location to load the forecast.</p>
+        </article>
+        <article class="card">
+          <h2>About the aloft data</h2>
+          <p class="small muted">Pressure-level winds are model-level data, not observations. The 100 m / 250 m / 500 m views interpolate between the available pressure levels; they make the table easier to read but do not add extra real model detail.</p>
+          <div class="chips">
+            <span class="chip">Height: AGL + MSL</span>
+            <span class="chip">Limit: 3000 m AGL</span>
+            <span class="chip">Default: knots</span>
+          </div>
+        </article>
+      </section>
+
+      <section class="stack">
+        <article class="card" id="dailyCard">
+          <h2>Daily forecast</h2>
+          <p class="muted">Waiting for a location...</p>
+        </article>
+
+        <article class="card" id="hourlyCard">
+          <h2>Next forecast hours</h2>
+          <p class="muted">Waiting for a location...</p>
+        </article>
+
+        <article class="card" id="aloftCard">
+          <h2>Winds aloft</h2>
+          <p class="muted">Waiting for a location...</p>
+        </article>
+      </section>
+    </main>
+
+    <footer>
+      Data: <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo</a>. Location search: Open-Meteo Geocoding / GeoNames. This page runs fully in the browser and is suitable for GitHub Pages. Do not use it as your only source for aviation safety, mountain safety, marine safety, or severe-weather decisions.
+    </footer>
+  </div>
+
+<script>
+(() => {
+  "use strict";
+
+  const PRESSURE_LEVEL_SETS = [
+    [1000, 975, 950, 925, 900, 850, 800, 700],
+    [1000, 950, 925, 900, 850, 800, 700],
+    [1000, 925, 850, 700]
+  ];
+  const MAX_AGL = 3000;
+
+  const el = {
+    locationInput: document.getElementById("locationInput"),
+    searchBtn: document.getElementById("searchBtn"),
+    gpsBtn: document.getElementById("gpsBtn"),
+    daysSelect: document.getElementById("daysSelect"),
+    windUnitSelect: document.getElementById("windUnitSelect"),
+    aloftStepSelect: document.getElementById("aloftStepSelect"),
+    geoResults: document.getElementById("geoResults"),
+    notice: document.getElementById("notice"),
+    currentCard: document.getElementById("currentCard"),
+    dailyCard: document.getElementById("dailyCard"),
+    hourlyCard: document.getElementById("hourlyCard"),
+    aloftCard: document.getElementById("aloftCard")
+  };
+
+  let state = {
+    location: null,
+    surface: null,
+    aloft: null,
+    aloftLevels: [],
+    selectedAloftTime: null,
+    warning: ""
+  };
+
+  const WEATHER_CODES = {
+    0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
+    45: "Fog", 48: "Depositing rime fog",
+    51: "Light drizzle", 53: "Drizzle", 55: "Dense drizzle",
+    56: "Freezing drizzle", 57: "Dense freezing drizzle",
+    61: "Slight rain", 63: "Rain", 65: "Heavy rain",
+    66: "Freezing rain", 67: "Heavy freezing rain",
+    71: "Slight snow", 73: "Snow", 75: "Heavy snow", 77: "Snow grains",
+    80: "Slight rain showers", 81: "Rain showers", 82: "Violent showers",
+    85: "Snow showers", 86: "Heavy snow showers",
+    95: "Thunderstorm", 96: "Thunderstorm + hail", 99: "Severe thunderstorm + hail"
+  };
+
+  function setBusy(isBusy) {
+    el.searchBtn.disabled = isBusy;
+    el.gpsBtn.disabled = isBusy;
+    el.searchBtn.textContent = isBusy ? "Loading..." : "Search";
+  }
+
+  function showNotice(message, type = "") {
+    el.notice.textContent = message || "";
+    el.notice.className = `notice ${message ? "show" : ""} ${type}`.trim();
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[c]));
+  }
+
+  function round(value, dp = 0) {
+    if (value === null || value === undefined || Number.isNaN(value)) return "—";
+    return Number(value).toFixed(dp);
+  }
+
+  function kmToUser(ms) {
+    // Everything is requested from Open-Meteo in m/s, then converted here.
+    const unit = el.windUnitSelect.value;
+    if (ms === null || ms === undefined || Number.isNaN(ms)) return { value: "—", unit };
+    const conversions = {
+      ms: [1, "m/s"],
+      kt: [1.94384449, "kt"],
+      kmh: [3.6, "km/h"],
+      mph: [2.23693629, "mph"]
+    };
+    const [factor, label] = conversions[unit] || conversions.kt;
+    return { value: (ms * factor).toFixed(unit === "ms" ? 1 : 0), unit: label };
+  }
+
+  function weatherText(code) { return WEATHER_CODES[Number(code)] || `Code ${code ?? "—"}`; }
+
+  function dirText(deg) {
+    if (deg === null || deg === undefined || Number.isNaN(deg)) return "—";
+    const dirs = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+    return dirs[Math.round((((deg % 360) + 360) % 360) / 22.5) % 16];
+  }
+
+  function parseLocalParts(iso) {
+    const [date, time = "00:00"] = String(iso).split("T");
+    const [y, m, d] = date.split("-").map(Number);
+    const [hh = 0, mm = 0] = time.split(":").map(Number);
+    return { y, m, d, hh, mm, date, time };
+  }
+
+  function localStamp(iso) {
+    const p = parseLocalParts(iso);
+    return Date.UTC(p.y, p.m - 1, p.d, p.hh, p.mm || 0);
+  }
+
+  function formatLocal(iso, includeDate = true) {
+    if (!iso) return "—";
+    const p = parseLocalParts(iso);
+    const dateObj = new Date(Date.UTC(p.y, p.m - 1, p.d, p.hh, p.mm || 0));
+    const weekday = new Intl.DateTimeFormat("en-GB", { weekday: "short", timeZone: "UTC" }).format(dateObj);
+    const month = new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC" }).format(dateObj);
+    const hm = `${String(p.hh).padStart(2, "0")}:${String(p.mm || 0).padStart(2, "0")}`;
+    return includeDate ? `${weekday} ${p.d} ${month} ${hm}` : hm;
+  }
+
+  function formatDay(dateIso) {
+    const p = parseLocalParts(dateIso);
+    const dateObj = new Date(Date.UTC(p.y, p.m - 1, p.d));
+    const weekday = new Intl.DateTimeFormat("en-GB", { weekday: "short", timeZone: "UTC" }).format(dateObj);
+    const month = new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC" }).format(dateObj);
+    return `${weekday} ${p.d} ${month}`;
+  }
+
+  function buildParams(params) {
+    const search = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (Array.isArray(value)) search.set(key, value.join(","));
+      else if (value !== undefined && value !== null && value !== "") search.set(key, String(value));
+    });
+    return search.toString();
+  }
+
+  async function fetchJson(url) {
+    const response = await fetch(url);
+    const data = await response.json().catch(() => null);
+    if (!response.ok || data?.error) {
+      throw new Error(data?.reason || `Request failed: ${response.status}`);
+    }
+    return data;
+  }
+
+  function looksLikeCoordinates(text) {
+    const match = text.trim().match(/^(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)$/);
+    if (!match) return null;
+    const latitude = Number(match[1]);
+    const longitude = Number(match[2]);
+    if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return null;
+    return { latitude, longitude, name: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`, admin1: "", country: "Custom coordinates", elevation: null };
+  }
+
+  async function geocode(query) {
+    const coord = looksLikeCoordinates(query);
+    if (coord) return [coord];
+    const url = "https://geocoding-api.open-meteo.com/v1/search?" + buildParams({
+      name: query,
+      count: 8,
+      language: "en",
+      format: "json"
+    });
+    const data = await fetchJson(url);
+    return data.results || [];
+  }
+
+  function locationLabel(loc) {
+    return [loc.name, loc.admin2, loc.admin1, loc.country].filter(Boolean).join(", ");
+  }
+
+  async function searchLocation(query) {
+    showNotice("");
+    el.geoResults.innerHTML = "";
+    if (!query.trim()) return;
+    setBusy(true);
+    try {
+      const results = await geocode(query);
+      if (!results.length) {
+        showNotice("No matching location found. Try a nearby town, postcode, or latitude,longitude.", "warn");
+        return;
+      }
+      if (results.length === 1 || looksLikeCoordinates(query)) {
+        await loadLocation(results[0]);
+        return;
+      }
+      el.geoResults.innerHTML = results.map((r, i) => `
+        <button class="resultBtn" data-index="${i}" type="button">
+          <strong>${escapeHtml(locationLabel(r))}</strong><br>
+          <span class="muted small">${round(r.latitude, 4)}, ${round(r.longitude, 4)}${r.elevation != null ? ` · ${round(r.elevation)} m elevation` : ""}</span>
+        </button>`).join("");
+      el.geoResults.querySelectorAll("button").forEach(button => {
+        button.addEventListener("click", () => loadLocation(results[Number(button.dataset.index)]));
+      });
+      showNotice("Choose the correct result above.");
+    } catch (err) {
+      showNotice(err.message, "error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function surfaceUrl(loc) {
+    const current = [
+      "temperature_2m", "apparent_temperature", "relative_humidity_2m", "is_day",
+      "precipitation", "weather_code", "cloud_cover", "pressure_msl", "surface_pressure",
+      "wind_speed_10m", "wind_direction_10m", "wind_gusts_10m"
+    ];
+    const hourly = [
+      "temperature_2m", "apparent_temperature", "precipitation_probability", "precipitation",
+      "weather_code", "cloud_cover", "visibility", "pressure_msl", "surface_pressure",
+      "wind_speed_10m", "wind_direction_10m", "wind_gusts_10m"
+    ];
+    const daily = [
+      "weather_code", "temperature_2m_max", "temperature_2m_min", "precipitation_sum",
+      "precipitation_probability_max", "wind_speed_10m_max", "wind_gusts_10m_max",
+      "wind_direction_10m_dominant", "sunrise", "sunset"
+    ];
+    return "https://api.open-meteo.com/v1/forecast?" + buildParams({
+      latitude: loc.latitude,
+      longitude: loc.longitude,
+      current,
+      hourly,
+      daily,
+      timezone: "auto",
+      forecast_days: el.daysSelect.value,
+      temperature_unit: "celsius",
+      wind_speed_unit: "ms",
+      precipitation_unit: "mm"
+    });
+  }
+
+  function aloftVariables(levels) {
+    const out = [];
+    for (const level of levels) {
+      out.push(`wind_speed_${level}hPa`, `wind_direction_${level}hPa`, `geopotential_height_${level}hPa`, `temperature_${level}hPa`);
+    }
+    return out;
+  }
+
+  function aloftUrl(loc, levels) {
+    return "https://api.open-meteo.com/v1/ecmwf?" + buildParams({
+      latitude: loc.latitude,
+      longitude: loc.longitude,
+      hourly: aloftVariables(levels),
+      timezone: "auto",
+      forecast_days: Math.min(Number(el.daysSelect.value), 15),
+      temperature_unit: "celsius",
+      wind_speed_unit: "ms"
+    });
+  }
+
+  async function loadAloftWithFallback(loc) {
+    let lastError = null;
+    for (const levels of PRESSURE_LEVEL_SETS) {
+      try {
+        const data = await fetchJson(aloftUrl(loc, levels));
+        return { data, levels, warning: levels.length < PRESSURE_LEVEL_SETS[0].length ? `Using a reduced pressure-level set: ${levels.join(", ")} hPa.` : "" };
+      } catch (err) {
+        lastError = err;
+      }
+    }
+    throw lastError || new Error("Could not load winds aloft.");
+  }
+
+  async function loadLocation(loc) {
+    setBusy(true);
+    showNotice("Loading forecast...");
+    el.geoResults.innerHTML = "";
+    try {
+      const [surface, aloftPack] = await Promise.all([
+        fetchJson(surfaceUrl(loc)),
+        loadAloftWithFallback(loc)
+      ]);
+      state.location = loc;
+      state.surface = surface;
+      state.aloft = aloftPack.data;
+      state.aloftLevels = aloftPack.levels;
+      state.selectedAloftTime = state.aloft?.hourly?.time?.[0] || null;
+      state.warning = aloftPack.warning;
+      const label = locationLabel(loc);
+      el.locationInput.value = label;
+      localStorage.setItem("weatherAloftLastLocation", JSON.stringify(loc));
+      const params = new URLSearchParams({ lat: loc.latitude, lon: loc.longitude, name: label });
+      history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
+      renderAll();
+      showNotice(state.warning || `Loaded ${label}. Times shown are local to the forecast location.` , state.warning ? "warn" : "");
+    } catch (err) {
+      showNotice(err.message, "error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function renderAll() {
+    renderCurrent();
+    renderDaily();
+    renderHourly();
+    renderAloft();
+  }
+
+  function renderCurrent() {
+    const c = state.surface?.current;
+    if (!c) return;
+    const loc = state.location;
+    const wind = kmToUser(c.wind_speed_10m);
+    const gust = kmToUser(c.wind_gusts_10m);
+    el.currentCard.innerHTML = `
+      <h2>${escapeHtml(locationLabel(loc))}</h2>
+      <p class="muted small">${formatLocal(c.time)} · ${escapeHtml(state.surface.timezone || "local time")} · elevation ${round(state.surface.elevation ?? loc.elevation)} m</p>
+      <div class="currentTemp">
+        <div class="tempBig">${round(c.temperature_2m)}°</div>
+        <div>
+          <strong>${escapeHtml(weatherText(c.weather_code))}</strong><br>
+          <span class="muted">Feels ${round(c.apparent_temperature)}°C</span>
+        </div>
+      </div>
+      <div class="chips">
+        <span class="chip">Wind ${wind.value} ${wind.unit} ${dirText(c.wind_direction_10m)} (${round(c.wind_direction_10m)}°)</span>
+        <span class="chip">Gust ${gust.value} ${gust.unit}</span>
+        <span class="chip">Humidity ${round(c.relative_humidity_2m)}%</span>
+        <span class="chip">Cloud ${round(c.cloud_cover)}%</span>
+        <span class="chip">MSL pressure ${round(c.pressure_msl)} hPa</span>
+        <span class="chip">Rain now ${round(c.precipitation, 1)} mm</span>
+      </div>`;
+  }
+
+  function renderDaily() {
+    const d = state.surface?.daily;
+    if (!d?.time) return;
+    const cards = d.time.map((date, i) => {
+      const wind = kmToUser(d.wind_speed_10m_max?.[i]);
+      const gust = kmToUser(d.wind_gusts_10m_max?.[i]);
+      return `<div class="dayCard">
+        <div class="dayTop"><strong>${formatDay(date)}</strong><span class="dayDate">${escapeHtml(weatherText(d.weather_code?.[i]))}</span></div>
+        <div class="dayTemp">${round(d.temperature_2m_max?.[i])}° / ${round(d.temperature_2m_min?.[i])}°</div>
+        <div class="muted small">Rain ${round(d.precipitation_sum?.[i], 1)} mm · ${round(d.precipitation_probability_max?.[i])}%</div>
+        <div class="muted small">Wind ${wind.value} ${wind.unit} ${dirText(d.wind_direction_10m_dominant?.[i])} · gust ${gust.value} ${gust.unit}</div>
+        <div class="muted small">Sun ${formatLocal(d.sunrise?.[i], false)}–${formatLocal(d.sunset?.[i], false)}</div>
+      </div>`;
+    }).join("");
+    el.dailyCard.innerHTML = `<h2>Daily forecast</h2><div class="dailyGrid">${cards}</div>`;
+  }
+
+  function renderHourly() {
+    const h = state.surface?.hourly;
+    if (!h?.time) return;
+    const now = state.surface?.current?.time ? localStamp(state.surface.current.time) : Date.now();
+    const start = Math.max(0, h.time.findIndex(t => localStamp(t) >= now));
+    const rows = h.time.slice(start, start + 36).map((time, offset) => {
+      const i = start + offset;
+      const wind = kmToUser(h.wind_speed_10m?.[i]);
+      const gust = kmToUser(h.wind_gusts_10m?.[i]);
+      const barWidth = Math.min(160, Number(h.wind_speed_10m?.[i] || 0) * 7);
+      return `<tr>
+        <td>${formatLocal(time)}</td>
+        <td>${round(h.temperature_2m?.[i])}°C</td>
+        <td>${escapeHtml(weatherText(h.weather_code?.[i]))}</td>
+        <td>${round(h.precipitation_probability?.[i])}% / ${round(h.precipitation?.[i], 1)} mm</td>
+        <td><span class="windArrow" style="transform: rotate(${Number(h.wind_direction_10m?.[i] || 0)}deg)">↓</span>${wind.value} ${wind.unit} ${dirText(h.wind_direction_10m?.[i])}<span class="bar" style="width:${barWidth}px"></span></td>
+        <td>${gust.value} ${gust.unit}</td>
+        <td>${round(h.cloud_cover?.[i])}%</td>
+        <td>${h.visibility?.[i] != null ? round(h.visibility[i] / 1000, 1) + " km" : "—"}</td>
+      </tr>`;
+    }).join("");
+    el.hourlyCard.innerHTML = `
+      <h2>Next forecast hours</h2>
+      <div class="tableWrap"><table>
+        <thead><tr><th>Time</th><th>Temp</th><th>Weather</th><th>Rain</th><th>10 m wind</th><th>Gust</th><th>Cloud</th><th>Vis</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>`;
+  }
+
+  function surfacePointForTime(time) {
+    const h = state.surface?.hourly;
+    if (!h?.time?.length) return null;
+    let idx = h.time.indexOf(time);
+    if (idx < 0) {
+      const target = localStamp(time);
+      let best = 0, bestDiff = Infinity;
+      h.time.forEach((t, i) => {
+        const diff = Math.abs(localStamp(t) - target);
+        if (diff < bestDiff) { best = i; bestDiff = diff; }
+      });
+      idx = best;
+    }
+    const elevation = Number(state.surface?.elevation ?? state.location?.elevation ?? 0);
+    return {
+      label: "10 m surface",
+      source: "surface",
+      pressure: null,
+      agl: 10,
+      msl: elevation + 10,
+      speed: h.wind_speed_10m?.[idx],
+      dir: h.wind_direction_10m?.[idx],
+      temp: h.temperature_2m?.[idx]
+    };
+  }
+
+  function rawAloftPoints(time) {
+    const data = state.aloft?.hourly;
+    if (!data?.time?.length) return [];
+    let idx = data.time.indexOf(time);
+    if (idx < 0) idx = 0;
+    const elevation = Number(state.surface?.elevation ?? state.location?.elevation ?? 0);
+    const points = [];
+    const surface = surfacePointForTime(time);
+    if (surface && finite(surface.speed) && finite(surface.dir)) points.push(surface);
+    for (const level of state.aloftLevels) {
+      const hgt = data[`geopotential_height_${level}hPa`]?.[idx];
+      const speed = data[`wind_speed_${level}hPa`]?.[idx];
+      const dir = data[`wind_direction_${level}hPa`]?.[idx];
+      const temp = data[`temperature_${level}hPa`]?.[idx];
+      if ([hgt, speed, dir].every(finite)) {
+        points.push({
+          label: `${level} hPa`, source: "pressure", pressure: level,
+          msl: hgt, agl: hgt - elevation, speed, dir, temp
+        });
+      }
+    }
+    return points.sort((a, b) => a.agl - b.agl);
+  }
+
+  function finite(v) { return typeof v === "number" && Number.isFinite(v); }
+
+  function windToUV(speed, dirDeg) {
+    const rad = dirDeg * Math.PI / 180;
+    return { u: -speed * Math.sin(rad), v: -speed * Math.cos(rad) };
+  }
+
+  function uvToWind(u, v) {
+    const speed = Math.sqrt(u * u + v * v);
+    const dir = ((Math.atan2(-u, -v) * 180 / Math.PI) + 360) % 360;
+    return { speed, dir };
+  }
+
+  function lerp(a, b, f) { return a + (b - a) * f; }
+
+  function interpolateAt(points, agl) {
+    const valid = points.filter(p => finite(p.agl) && finite(p.speed) && finite(p.dir)).sort((a, b) => a.agl - b.agl);
+    if (!valid.length) return null;
+    const exact = valid.find(p => Math.abs(p.agl - agl) < 25);
+    if (exact) return { ...exact, targetAgl: agl, interpolated: false };
+    let lower = null, upper = null;
+    for (let i = 0; i < valid.length - 1; i++) {
+      if (valid[i].agl <= agl && valid[i + 1].agl >= agl) {
+        lower = valid[i]; upper = valid[i + 1]; break;
+      }
+    }
+    if (!lower || !upper) return null;
+    const f = (agl - lower.agl) / (upper.agl - lower.agl);
+    const a = windToUV(lower.speed, lower.dir);
+    const b = windToUV(upper.speed, upper.dir);
+    const wind = uvToWind(lerp(a.u, b.u, f), lerp(a.v, b.v, f));
+    return {
+      label: `${Math.round(agl)} m AGL`, source: `${lower.label} → ${upper.label}`,
+      pressure: null, targetAgl: agl, agl, msl: lerp(lower.msl, upper.msl, f),
+      speed: wind.speed, dir: wind.dir,
+      temp: finite(lower.temp) && finite(upper.temp) ? lerp(lower.temp, upper.temp, f) : null,
+      interpolated: true
+    };
+  }
+
+  function windCell(point) {
+    const wind = kmToUser(point.speed);
+    const width = Math.min(180, Number(point.speed || 0) * 8);
+    return `<span class="windArrow" style="transform: rotate(${Number(point.dir || 0)}deg)">↓</span>${wind.value} ${wind.unit} ${dirText(point.dir)} (${round(point.dir)}°)<span class="bar" style="width:${width}px"></span>`;
+  }
+
+  function aloftRows(points, mode) {
+    if (mode === "raw") {
+      return points
+        .filter(p => p.source === "surface" || (p.agl >= -100 && p.agl <= MAX_AGL + 350))
+        .map(p => `<tr>
+          <td>${escapeHtml(p.label)}</td>
+          <td>${round(p.agl)} m</td>
+          <td>${round(p.msl)} m</td>
+          <td>${windCell(p)}</td>
+          <td>${round(p.temp, 1)}°C</td>
+          <td>${p.agl < 0 ? "below local ground" : "direct model/surface"}</td>
+        </tr>`).join("");
+    }
+    const step = Number(mode);
+    const targets = [10];
+    for (let h = step; h <= MAX_AGL; h += step) targets.push(h);
+    return targets.map(agl => interpolateAt(points, agl)).filter(Boolean).map(p => `<tr>
+      <td>${round(p.targetAgl ?? p.agl)} m</td>
+      <td>${round(p.msl)} m</td>
+      <td>${windCell(p)}</td>
+      <td>${round(p.temp, 1)}°C</td>
+      <td>${escapeHtml(p.interpolated ? `interpolated: ${p.source}` : p.label)}</td>
+    </tr>`).join("");
+  }
+
+  function renderAloft() {
+    const times = state.aloft?.hourly?.time || [];
+    if (!times.length) return;
+    const current = state.surface?.current?.time;
+    if (!state.selectedAloftTime || !times.includes(state.selectedAloftTime)) {
+      const target = current ? localStamp(current) : Date.now();
+      state.selectedAloftTime = times.reduce((best, t) => Math.abs(localStamp(t) - target) < Math.abs(localStamp(best) - target) ? t : best, times[0]);
+    }
+    const options = times.map(t => `<option value="${escapeHtml(t)}" ${t === state.selectedAloftTime ? "selected" : ""}>${formatLocal(t)}</option>`).join("");
+    const points = rawAloftPoints(state.selectedAloftTime);
+    const mode = el.aloftStepSelect.value;
+    const rows = aloftRows(points, mode);
+    const header = mode === "raw"
+      ? `<tr><th>Level</th><th>Height AGL</th><th>Height MSL</th><th>Wind</th><th>Temp</th><th>Source</th></tr>`
+      : `<tr><th>Target height AGL</th><th>Height MSL</th><th>Wind</th><th>Temp</th><th>Source</th></tr>`;
+    el.aloftCard.innerHTML = `
+      <h2>Winds aloft to ${MAX_AGL} m AGL</h2>
+      <div class="toolbar">
+        <div class="field time"><label for="aloftTimeSelect">Forecast time</label><select id="aloftTimeSelect">${options}</select></div>
+        <div class="field"><label>Pressure levels</label><input readonly value="${escapeHtml(state.aloftLevels.join(", "))} hPa"></div>
+        <div class="field"><label>&nbsp;</label><button class="secondary" id="copyCsvBtn" type="button">Copy CSV</button></div>
+      </div>
+      <p class="muted small">Heights are calculated from ECMWF geopotential height minus local terrain elevation. Arrows point where the wind is blowing to; direction text/degrees are where it is coming from, meteorological style.</p>
+      <div class="tableWrap"><table><thead>${header}</thead><tbody>${rows || `<tr><td colspan="6">No aloft rows available for this time/location.</td></tr>`}</tbody></table></div>
+      <details>
+        <summary>Raw pressure-level data near the ground to 3000 m</summary>
+        <div class="tableWrap" style="margin-top:10px"><table>
+          <thead><tr><th>Level</th><th>Height AGL</th><th>Height MSL</th><th>Wind</th><th>Temp</th><th>Source</th></tr></thead>
+          <tbody>${aloftRows(points, "raw")}</tbody>
+        </table></div>
+      </details>`;
+    document.getElementById("aloftTimeSelect")?.addEventListener("change", e => {
+      state.selectedAloftTime = e.target.value;
+      renderAloft();
+    });
+    document.getElementById("copyCsvBtn")?.addEventListener("click", copyAloftCsv);
+  }
+
+  function copyAloftCsv() {
+    const points = rawAloftPoints(state.selectedAloftTime);
+    const mode = el.aloftStepSelect.value;
+    const rows = [];
+    if (mode === "raw") {
+      for (const p of points.filter(p => p.source === "surface" || (p.agl >= -100 && p.agl <= MAX_AGL + 350))) {
+        const w = kmToUser(p.speed);
+        rows.push([state.selectedAloftTime, p.label, round(p.agl), round(p.msl), w.value, w.unit, round(p.dir), dirText(p.dir), round(p.temp, 1), p.source]);
+      }
+    } else {
+      const step = Number(mode);
+      const targets = [10];
+      for (let h = step; h <= MAX_AGL; h += step) targets.push(h);
+      for (const agl of targets) {
+        const p = interpolateAt(points, agl);
+        if (!p) continue;
+        const w = kmToUser(p.speed);
+        rows.push([state.selectedAloftTime, round(p.targetAgl ?? p.agl), round(p.msl), w.value, w.unit, round(p.dir), dirText(p.dir), round(p.temp, 1), p.interpolated ? p.source : p.label]);
+      }
+    }
+    const header = mode === "raw"
+      ? ["time_local", "level", "height_agl_m", "height_msl_m", "wind_speed", "wind_unit", "wind_from_deg", "wind_from_compass", "temp_c", "source"]
+      : ["time_local", "target_agl_m", "height_msl_m", "wind_speed", "wind_unit", "wind_from_deg", "wind_from_compass", "temp_c", "source"];
+    const csv = [header, ...rows].map(row => row.map(cell => `"${String(cell ?? "").replaceAll('"', '""')}"`).join(",")).join("\n");
+    navigator.clipboard?.writeText(csv).then(() => showNotice("Copied winds-aloft CSV to clipboard."), () => showNotice("Could not copy CSV in this browser.", "warn"));
+  }
+
+  el.searchBtn.addEventListener("click", () => searchLocation(el.locationInput.value));
+  el.locationInput.addEventListener("keydown", e => {
+    if (e.key === "Enter") searchLocation(el.locationInput.value);
+  });
+  el.windUnitSelect.addEventListener("change", renderAll);
+  el.aloftStepSelect.addEventListener("change", renderAloft);
+  el.daysSelect.addEventListener("change", () => {
+    if (state.location) loadLocation(state.location);
+  });
+  el.gpsBtn.addEventListener("click", () => {
+    if (!navigator.geolocation) {
+      showNotice("This browser does not support geolocation. Enter a place or latitude,longitude instead.", "warn");
+      return;
+    }
+    setBusy(true);
+    showNotice("Waiting for GPS permission...");
+    navigator.geolocation.getCurrentPosition(pos => {
+      const loc = {
+        name: "GPS location",
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+        country: "",
+        admin1: "",
+        elevation: null
+      };
+      loadLocation(loc);
+    }, err => {
+      setBusy(false);
+      showNotice(err.message || "Could not get GPS location.", "error");
+    }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 600000 });
+  });
+
+  function initialLoad() {
+    const params = new URLSearchParams(location.search);
+    const lat = Number(params.get("lat"));
+    const lon = Number(params.get("lon"));
+    if (Number.isFinite(lat) && Number.isFinite(lon)) {
+      const loc = { latitude: lat, longitude: lon, name: params.get("name") || `${lat}, ${lon}`, country: "", admin1: "", elevation: null };
+      el.locationInput.value = loc.name;
+      loadLocation(loc);
+      return;
+    }
+    const last = localStorage.getItem("weatherAloftLastLocation");
+    if (last) {
+      try {
+        const loc = JSON.parse(last);
+        el.locationInput.value = locationLabel(loc);
+        loadLocation(loc);
+        return;
+      } catch { /* ignore */ }
+    }
+    el.locationInput.value = "Bishop's Stortford";
+    searchLocation(el.locationInput.value);
+  }
+
+  initialLoad();
+})();
+</script>
+</body>
+</html>
