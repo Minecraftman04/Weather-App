@@ -257,6 +257,18 @@
       margin-left: 8px;
     }
 
+    .rainRow td { background: rgba(109, 211, 255, 0.055); }
+    .rainIntensity {
+      display: inline-block;
+      margin-left: 8px;
+      padding: 2px 7px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(109, 211, 255, 0.10);
+      color: #dff5ff;
+      font-size: 0.82rem;
+    }
+
     .toolbar {
       display: flex;
       flex-wrap: wrap;
@@ -357,13 +369,14 @@
         </article>
         <article class="card">
           <h2>About the aloft data</h2>
-          <p class="small muted">Pressure-level winds and cloud cover are model-level data, not observations. Cloud cover at pressure levels is approximated from relative humidity. The winds-aloft page also shows current/modelled sea-level pressure and the forecast sea-level pressure for the selected aloft time. The 100 m / 250 m / 500 m views interpolate between the available pressure levels; they make the table easier to read but do not add extra real model detail.</p>
+          <p class="small muted">Pressure-level winds and cloud cover are model-level data, not observations. Cloud cover at pressure levels is approximated from relative humidity. The winds-aloft page also shows current/modelled sea-level pressure and the forecast sea-level pressure for the selected aloft time. The 100 m / 250 m / 500 m wind views interpolate between the available pressure levels; the rain nowcast does not interpolate on this page and only shows returned 15-minute precipitation steps.</p>
           <div class="chips">
             <span class="chip">Height: AGL + MSL</span>
             <span class="chip">Limit: 3000 m AGL</span>
             <span class="chip">Default: knots</span>
             <span class="chip">Cloud at each level</span>
             <span class="chip">MSL pressure now + forecast</span>
+            <span class="chip">15-min rain steps</span>
           </div>
         </article>
       </section>
@@ -371,6 +384,11 @@
       <section class="stack">
         <article class="card" id="dailyCard">
           <h2>Daily forecast</h2>
+          <p class="muted">Waiting for a location...</p>
+        </article>
+
+        <article class="card" id="minuteRainCard">
+          <h2>Rain nowcast</h2>
           <p class="muted">Waiting for a location...</p>
         </article>
 
@@ -414,6 +432,7 @@
     notice: document.getElementById("notice"),
     currentCard: document.getElementById("currentCard"),
     dailyCard: document.getElementById("dailyCard"),
+    minuteRainCard: document.getElementById("minuteRainCard"),
     hourlyCard: document.getElementById("hourlyCard"),
     aloftCard: document.getElementById("aloftCard")
   };
@@ -602,6 +621,9 @@
       "weather_code", "cloud_cover", "visibility", "pressure_msl", "surface_pressure",
       "wind_speed_10m", "wind_direction_10m", "wind_gusts_10m"
     ];
+    const minutely15 = [
+      "precipitation", "rain", "snowfall", "weather_code"
+    ];
     const daily = [
       "weather_code", "temperature_2m_max", "temperature_2m_min", "precipitation_sum",
       "precipitation_probability_max", "wind_speed_10m_max", "wind_gusts_10m_max",
@@ -612,9 +634,11 @@
       longitude: loc.longitude,
       current,
       hourly,
+      minutely_15: minutely15,
       daily,
       timezone: "auto",
       forecast_days: el.daysSelect.value,
+      forecast_minutely_15: 32,
       temperature_unit: "celsius",
       wind_speed_unit: "ms",
       precipitation_unit: "mm"
@@ -699,6 +723,7 @@
   function renderAll() {
     renderCurrent();
     renderDaily();
+    renderMinuteRain();
     renderHourly();
     renderAloft();
   }
@@ -745,6 +770,86 @@
       </div>`;
     }).join("");
     el.dailyCard.innerHTML = `<h2>Daily forecast</h2><div class="dailyGrid">${cards}</div>`;
+  }
+
+
+  function rainClass(amount) {
+    if (!finite(amount) || amount <= 0) return "Dry";
+    if (amount < 0.2) return "Spotting";
+    if (amount < 1.0) return "Light";
+    if (amount < 3.0) return "Moderate";
+    return "Heavy";
+  }
+
+  function formatDurationMinutes(minutes) {
+    if (!Number.isFinite(minutes) || minutes < 0) return "—";
+    if (minutes < 60) return `${Math.round(minutes)} min`;
+    const h = Math.floor(minutes / 60);
+    const m = Math.round(minutes % 60);
+    return m ? `${h} h ${m} min` : `${h} h`;
+  }
+
+  function minutelyRowsFromNow(limit = 32) {
+    const m = state.surface?.minutely_15;
+    if (!m?.time?.length) return [];
+    const now = state.surface?.current?.time ? localStamp(state.surface.current.time) : Date.now();
+    let start = m.time.findIndex(t => localStamp(t) >= now - 15 * 60 * 1000);
+    if (start < 0) start = 0;
+    return m.time.slice(start, start + limit).map((time, offset) => {
+      const i = start + offset;
+      const precipitation = Number(m.precipitation?.[i] ?? 0);
+      const rain = Number(m.rain?.[i] ?? 0);
+      const snowfall = Number(m.snowfall?.[i] ?? 0);
+      return { time, precipitation, rain, snowfall, weatherCode: m.weather_code?.[i] };
+    });
+  }
+
+  function renderMinuteRain() {
+    const rowsData = minutelyRowsFromNow(32);
+    if (!rowsData.length) {
+      el.minuteRainCard.innerHTML = `
+        <h2>Rain nowcast</h2>
+        <p class="muted">No 15-minute rain data was returned for this location/time.</p>`;
+      return;
+    }
+    const threshold = 0.01;
+    const nextWet = rowsData.find(r => finite(r.precipitation) && r.precipitation >= threshold);
+    const maxRow = rowsData.reduce((best, r) => (Number(r.precipitation || 0) > Number(best.precipitation || 0) ? r : best), rowsData[0]);
+    const total2h = rowsData.slice(0, 8).reduce((sum, r) => sum + Number(r.precipitation || 0), 0);
+    const total4h = rowsData.slice(0, 16).reduce((sum, r) => sum + Number(r.precipitation || 0), 0);
+    const nowStamp = state.surface?.current?.time ? localStamp(state.surface.current.time) : Date.now();
+    const nextWetMins = nextWet ? Math.max(0, (localStamp(nextWet.time) - nowStamp) / 60000) : null;
+    const nextWetText = nextWet
+      ? `${formatLocal(nextWet.time, false)} in ${formatDurationMinutes(nextWetMins)} · ${round(nextWet.precipitation, 2)} mm/15 min`
+      : "No rain in the next 8 h";
+    const maxText = maxRow && Number(maxRow.precipitation || 0) > 0
+      ? `${round(maxRow.precipitation, 2)} mm/15 min at ${formatLocal(maxRow.time, false)}`
+      : "0.00 mm/15 min";
+    const rows = rowsData.map(r => {
+      const intensity = Number(r.precipitation || 0) * 4;
+      const wet = Number(r.precipitation || 0) >= threshold;
+      return `<tr class="${wet ? "rainRow" : ""}">
+        <td>${formatLocal(r.time)}</td>
+        <td><strong>${round(r.precipitation, 2)} mm</strong><span class="rainIntensity">${rainClass(r.precipitation)}</span></td>
+        <td>${round(intensity, 2)} mm/h</td>
+        <td>${round(r.rain, 2)} mm</td>
+        <td>${round(r.snowfall, 2)} cm</td>
+        <td>${escapeHtml(weatherText(r.weatherCode))}</td>
+      </tr>`;
+    }).join("");
+    el.minuteRainCard.innerHTML = `
+      <h2>Rain nowcast / minute-cast style</h2>
+      <div class="chips">
+        <span class="chip">Next rain: ${escapeHtml(nextWetText)}</span>
+        <span class="chip">Next 2 h total ${round(total2h, 2)} mm</span>
+        <span class="chip">Next 4 h total ${round(total4h, 2)} mm</span>
+        <span class="chip">Peak ${escapeHtml(maxText)}</span>
+      </div>
+      <p class="muted small">This uses the API's returned 15-minute precipitation timesteps only — this page does not interpolate them into 1-minute values. Each precipitation value is the amount for the preceding 15 minutes ending at the shown time. Open-Meteo notes that native 15-minute data is available in Central Europe and North America; other regions may be internally derived from hourly data, so treat it as not strict non-interpolated there.</p>
+      <div class="tableWrap"><table>
+        <thead><tr><th>Time</th><th>Total precip</th><th>Rate equivalent</th><th>Rain</th><th>Snowfall</th><th>Weather</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>`;
   }
 
   function renderHourly() {

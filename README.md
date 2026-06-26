@@ -15,6 +15,7 @@ A single-file static weather dashboard for GitHub Pages. It uses Open-Meteo in t
 ## Notes
 
 - Normal current/hourly/daily weather comes from Open-Meteo's main Forecast API, including mean sea-level pressure and surface pressure.
+- The rain nowcast card requests Open-Meteo 15-minute precipitation data and displays only those returned timesteps. The page does not interpolate this into 1-minute values. Open-Meteo documents native 15-minute data for Central Europe and North America; other regions may be internally derived from hourly data.
 - Winds aloft and cloud cover aloft come from Open-Meteo's ECMWF pressure-level forecast. The winds-aloft card shows current/modelled MSL pressure plus forecast MSL pressure for the selected aloft time.
 - Interpolated wind/cloud-aloft rows are calculated between available pressure levels; they are not extra model levels.
 - The **Live weather** button uses browser GPS, switches to a 1-day forecast, selects the winds-aloft time nearest to now, and refreshes every 10 minutes while live mode is on.
