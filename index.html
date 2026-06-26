@@ -118,7 +118,7 @@
     .controls {
       margin-top: 10px;
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(5, 1fr);
       gap: 10px;
       align-items: end;
     }
@@ -338,6 +338,10 @@
             <label>&nbsp;</label>
             <button class="secondary" id="gpsBtn" type="button">Use my GPS</button>
           </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <button id="liveBtn" type="button" title="Use GPS, jump to now, and keep the forecast refreshed">Live weather</button>
+          </div>
         </div>
         <div id="geoResults" class="results"></div>
       </section>
@@ -401,6 +405,7 @@
     locationInput: document.getElementById("locationInput"),
     searchBtn: document.getElementById("searchBtn"),
     gpsBtn: document.getElementById("gpsBtn"),
+    liveBtn: document.getElementById("liveBtn"),
     daysSelect: document.getElementById("daysSelect"),
     windUnitSelect: document.getElementById("windUnitSelect"),
     aloftStepSelect: document.getElementById("aloftStepSelect"),
@@ -418,7 +423,10 @@
     aloft: null,
     aloftLevels: [],
     selectedAloftTime: null,
-    warning: ""
+    warning: "",
+    liveMode: false,
+    liveTimer: null,
+    lastLiveUpdate: null
   };
 
   const WEATHER_CODES = {
@@ -437,6 +445,7 @@
   function setBusy(isBusy) {
     el.searchBtn.disabled = isBusy;
     el.gpsBtn.disabled = isBusy;
+    el.liveBtn.disabled = isBusy;
     el.searchBtn.textContent = isBusy ? "Loading..." : "Search";
   }
 
@@ -657,8 +666,9 @@
       state.surface = surface;
       state.aloft = aloftPack.data;
       state.aloftLevels = aloftPack.levels;
-      state.selectedAloftTime = state.aloft?.hourly?.time?.[0] || null;
+      state.selectedAloftTime = state.liveMode ? nearestAloftTime(surface?.current?.time) : (state.aloft?.hourly?.time?.[0] || null);
       state.warning = aloftPack.warning;
+      if (state.liveMode) state.lastLiveUpdate = new Date();
       const label = locationLabel(loc);
       el.locationInput.value = label;
       localStorage.setItem("weatherAloftLastLocation", JSON.stringify(loc));
@@ -671,6 +681,18 @@
     } finally {
       setBusy(false);
     }
+  }
+
+  function nearestAloftTime(targetTime) {
+    const times = state.aloft?.hourly?.time || [];
+    if (!times.length) return null;
+    const target = targetTime ? localStamp(targetTime) : Date.now();
+    return times.reduce((best, t) => Math.abs(localStamp(t) - target) < Math.abs(localStamp(best) - target) ? t : best, times[0]);
+  }
+
+  function liveUpdateText() {
+    if (!state.lastLiveUpdate) return "Live mode on";
+    return `Live mode · refreshed ${state.lastLiveUpdate.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
   }
 
   function renderAll() {
@@ -703,6 +725,7 @@
         <span class="chip">Cloud ${round(c.cloud_cover)}%</span>
         <span class="chip">MSL pressure ${round(c.pressure_msl)} hPa</span>
         <span class="chip">Rain now ${round(c.precipitation, 1)} mm</span>
+        ${state.liveMode ? `<span class="chip">${escapeHtml(liveUpdateText())}</span>` : ""}
       </div>`;
   }
 
@@ -882,9 +905,11 @@
     const times = state.aloft?.hourly?.time || [];
     if (!times.length) return;
     const current = state.surface?.current?.time;
+    if (state.liveMode) {
+      state.selectedAloftTime = nearestAloftTime(current);
+    }
     if (!state.selectedAloftTime || !times.includes(state.selectedAloftTime)) {
-      const target = current ? localStamp(current) : Date.now();
-      state.selectedAloftTime = times.reduce((best, t) => Math.abs(localStamp(t) - target) < Math.abs(localStamp(best) - target) ? t : best, times[0]);
+      state.selectedAloftTime = nearestAloftTime(current);
     }
     const options = times.map(t => `<option value="${escapeHtml(t)}" ${t === state.selectedAloftTime ? "selected" : ""}>${formatLocal(t)}</option>`).join("");
     const points = rawAloftPoints(state.selectedAloftTime);
@@ -901,7 +926,7 @@
         <div class="field"><label>Pressure levels</label><input readonly value="${escapeHtml(state.aloftLevels.join(", "))} hPa"></div>
         <div class="field"><label>&nbsp;</label><button class="secondary" id="copyCsvBtn" type="button">Copy CSV</button></div>
       </div>
-      <p class="muted small">Heights are calculated from ECMWF geopotential height minus local terrain elevation. Cloud is pressure-level cloud cover %. Arrows point where the wind is blowing to; direction text/degrees are where it is coming from, meteorological style.</p>
+      <p class="muted small">${state.liveMode ? "Live weather mode is on, so the aloft time is kept closest to now. " : ""}Heights are calculated from ECMWF geopotential height minus local terrain elevation. Cloud is pressure-level cloud cover %. Arrows point where the wind is blowing to; direction text/degrees are where it is coming from, meteorological style.</p>
       <div class="tableWrap"><table><thead>${header}</thead><tbody>${rows || `<tr><td colspan="${emptyColspan}">No aloft rows available for this time/location.</td></tr>`}</tbody></table></div>
       <details>
         <summary>Raw pressure-level data near the ground to 3000 m</summary>
@@ -944,25 +969,40 @@
     navigator.clipboard?.writeText(csv).then(() => showNotice("Copied winds-aloft CSV to clipboard."), () => showNotice("Could not copy CSV in this browser.", "warn"));
   }
 
-  el.searchBtn.addEventListener("click", () => searchLocation(el.locationInput.value));
+  el.searchBtn.addEventListener("click", () => {
+    stopLiveWeather();
+    searchLocation(el.locationInput.value);
+  });
   el.locationInput.addEventListener("keydown", e => {
-    if (e.key === "Enter") searchLocation(el.locationInput.value);
+    if (e.key === "Enter") {
+      stopLiveWeather();
+      searchLocation(el.locationInput.value);
+    }
   });
   el.windUnitSelect.addEventListener("change", renderAll);
   el.aloftStepSelect.addEventListener("change", renderAloft);
   el.daysSelect.addEventListener("change", () => {
     if (state.location) loadLocation(state.location);
   });
-  el.gpsBtn.addEventListener("click", () => {
+
+  function stopLiveWeather() {
+    state.liveMode = false;
+    if (state.liveTimer) clearInterval(state.liveTimer);
+    state.liveTimer = null;
+    el.liveBtn.textContent = "Live weather";
+  }
+
+  async function useGpsLocation({ live = false } = {}) {
     if (!navigator.geolocation) {
+      if (live) stopLiveWeather();
       showNotice("This browser does not support geolocation. Enter a place or latitude,longitude instead.", "warn");
       return;
     }
     setBusy(true);
-    showNotice("Waiting for GPS permission...");
+    showNotice(live ? "Waiting for GPS permission for live weather..." : "Waiting for GPS permission...");
     navigator.geolocation.getCurrentPosition(pos => {
       const loc = {
-        name: "GPS location",
+        name: live ? "Live GPS location" : "GPS location",
         latitude: pos.coords.latitude,
         longitude: pos.coords.longitude,
         country: "",
@@ -972,8 +1012,34 @@
       loadLocation(loc);
     }, err => {
       setBusy(false);
+      if (live) stopLiveWeather();
       showNotice(err.message || "Could not get GPS location.", "error");
-    }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 600000 });
+    }, { enableHighAccuracy: true, timeout: 10000, maximumAge: live ? 60000 : 600000 });
+  }
+
+  function startLiveWeather() {
+    state.liveMode = true;
+    el.daysSelect.value = "1";
+    el.liveBtn.textContent = "Live: on";
+    useGpsLocation({ live: true });
+    if (state.liveTimer) clearInterval(state.liveTimer);
+    state.liveTimer = setInterval(() => {
+      if (state.liveMode) useGpsLocation({ live: true });
+    }, 10 * 60 * 1000);
+  }
+
+  el.gpsBtn.addEventListener("click", () => {
+    stopLiveWeather();
+    useGpsLocation({ live: false });
+  });
+
+  el.liveBtn.addEventListener("click", () => {
+    if (state.liveMode) {
+      stopLiveWeather();
+      showNotice("Live weather mode is off. The current loaded forecast stays on screen.");
+    } else {
+      startLiveWeather();
+    }
   });
 
   function initialLoad() {

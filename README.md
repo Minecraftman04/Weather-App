@@ -17,5 +17,6 @@ A single-file static weather dashboard for GitHub Pages. It uses Open-Meteo in t
 - Normal current/hourly/daily weather comes from Open-Meteo's main Forecast API.
 - Winds aloft and cloud cover aloft come from Open-Meteo's ECMWF pressure-level forecast.
 - Interpolated wind/cloud-aloft rows are calculated between available pressure levels; they are not extra model levels.
+- The **Live weather** button uses browser GPS, switches to a 1-day forecast, selects the winds-aloft time nearest to now, and refreshes every 10 minutes while live mode is on.
 - Heights are shown as AGL and MSL where possible, using Open-Meteo terrain elevation.
 - This should not be used as the sole source for aviation, severe weather, marine, or mountain safety decisions.
