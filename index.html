@@ -298,7 +298,7 @@
     <header>
       <div>
         <h1>Weather + Winds Aloft</h1>
-        <p class="subtitle">A static forecast dashboard for GitHub Pages. Search a place, view current and future surface weather, then inspect winds and cloud cover aloft up to 3000 m AGL using ECMWF pressure-level data.</p>
+        <p class="subtitle">A static forecast dashboard for GitHub Pages. Search a place, view current and future surface weather, then inspect winds, cloud cover, and sea-level pressure up to 3000 m AGL using ECMWF pressure-level data.</p>
       </div>
       <section class="searchPanel" aria-label="Location search">
         <div class="searchGrid">
@@ -357,12 +357,13 @@
         </article>
         <article class="card">
           <h2>About the aloft data</h2>
-          <p class="small muted">Pressure-level winds and cloud cover are model-level data, not observations. Cloud cover at pressure levels is approximated from relative humidity. The 100 m / 250 m / 500 m views interpolate between the available pressure levels; they make the table easier to read but do not add extra real model detail.</p>
+          <p class="small muted">Pressure-level winds and cloud cover are model-level data, not observations. Cloud cover at pressure levels is approximated from relative humidity. The winds-aloft page also shows current/modelled sea-level pressure and the forecast sea-level pressure for the selected aloft time. The 100 m / 250 m / 500 m views interpolate between the available pressure levels; they make the table easier to read but do not add extra real model detail.</p>
           <div class="chips">
             <span class="chip">Height: AGL + MSL</span>
             <span class="chip">Limit: 3000 m AGL</span>
             <span class="chip">Default: knots</span>
             <span class="chip">Cloud at each level</span>
+            <span class="chip">MSL pressure now + forecast</span>
           </div>
         </article>
       </section>
@@ -802,6 +803,48 @@
     };
   }
 
+  function surfaceIndexForTime(time) {
+    const h = state.surface?.hourly;
+    if (!h?.time?.length) return -1;
+    let idx = h.time.indexOf(time);
+    if (idx >= 0) return idx;
+    const target = time ? localStamp(time) : Date.now();
+    let best = 0, bestDiff = Infinity;
+    h.time.forEach((t, i) => {
+      const diff = Math.abs(localStamp(t) - target);
+      if (diff < bestDiff) { best = i; bestDiff = diff; }
+    });
+    return best;
+  }
+
+  function pressureForAloftTime(time) {
+    const h = state.surface?.hourly;
+    const idx = surfaceIndexForTime(time);
+    if (!h || idx < 0) return null;
+    return {
+      time: h.time?.[idx],
+      pressureMsl: h.pressure_msl?.[idx],
+      surfacePressure: h.surface_pressure?.[idx]
+    };
+  }
+
+  function pressureChipHtml(label, value, suffix = "") {
+    return `<span class="chip">${escapeHtml(label)} ${finite(value) ? `${round(value, 1)} hPa` : "—"}${suffix ? ` · ${escapeHtml(suffix)}` : ""}</span>`;
+  }
+
+  function aloftPressureSummaryHtml(time) {
+    const current = state.surface?.current;
+    const forecast = pressureForAloftTime(time);
+    const currentTime = current?.time ? formatLocal(current.time, false) : "now";
+    const forecastTime = forecast?.time ? formatLocal(forecast.time, false) : "selected time";
+    return `
+      <div class="chips" aria-label="Sea-level pressure summary">
+        ${pressureChipHtml("Current MSL pressure", current?.pressure_msl, currentTime)}
+        ${pressureChipHtml("Forecast MSL pressure", forecast?.pressureMsl, forecastTime)}
+        ${pressureChipHtml("Current surface pressure", current?.surface_pressure, currentTime)}
+      </div>`;
+  }
+
   function rawAloftPoints(time) {
     const data = state.aloft?.hourly;
     if (!data?.time?.length) return [];
@@ -915,6 +958,7 @@
     const points = rawAloftPoints(state.selectedAloftTime);
     const mode = el.aloftStepSelect.value;
     const rows = aloftRows(points, mode);
+    const pressureSummary = aloftPressureSummaryHtml(state.selectedAloftTime);
     const emptyColspan = mode === "raw" ? 7 : 6;
     const header = mode === "raw"
       ? `<tr><th>Level</th><th>Height AGL</th><th>Height MSL</th><th>Wind</th><th>Cloud</th><th>Temp</th><th>Source</th></tr>`
@@ -927,7 +971,8 @@
         <div class="field"><label>&nbsp;</label><button class="secondary" id="copyCsvBtn" type="button">Copy CSV</button></div>
         <div class="field"><label>&nbsp;</label><button class="secondary" id="openRocketCsvBtn" type="button">OpenRocket CSV</button></div>
       </div>
-      <p class="muted small">${state.liveMode ? "Live weather mode is on, so the aloft time is kept closest to now. " : ""}Heights are calculated from ECMWF geopotential height minus local terrain elevation. Cloud is pressure-level cloud cover %. Arrows point where the wind is blowing to; direction text/degrees are where it is coming from, meteorological style. OpenRocket CSV uses Altitude,Velocity,Direction,StdDev with altitude in metres AGL and velocity in m/s.</p>
+      ${pressureSummary}
+      <p class="muted small">${state.liveMode ? "Live weather mode is on, so the aloft time is kept closest to now. " : ""}Current conditions are Open-Meteo current model data; forecast MSL pressure comes from the surface hourly forecast nearest to the selected aloft time. Heights are calculated from ECMWF geopotential height minus local terrain elevation. Cloud is pressure-level cloud cover %. Arrows point where the wind is blowing to; direction text/degrees are where it is coming from, meteorological style. OpenRocket CSV uses the exact lowercase headers OpenRocket expects: altitude,speed,direction,stddev. Altitude is metres AGL; speed/stddev are m/s; direction is degrees wind-from.</p>
       <div class="tableWrap"><table><thead>${header}</thead><tbody>${rows || `<tr><td colspan="${emptyColspan}">No aloft rows available for this time/location.</td></tr>`}</tbody></table></div>
       <details>
         <summary>Raw pressure-level data near the ground to 3000 m</summary>
@@ -951,7 +996,8 @@
     if (mode === "raw") {
       for (const p of points.filter(p => p.source === "surface" || (p.agl >= -100 && p.agl <= MAX_AGL + 350))) {
         const w = kmToUser(p.speed);
-        rows.push([state.selectedAloftTime, p.label, round(p.agl), round(p.msl), w.value, w.unit, round(p.dir), dirText(p.dir), round(p.cloud), round(p.temp, 1), p.source]);
+        const pr = pressureForAloftTime(state.selectedAloftTime);
+        rows.push([state.selectedAloftTime, p.label, round(p.agl), round(p.msl), w.value, w.unit, round(p.dir), dirText(p.dir), round(p.cloud), round(p.temp, 1), finite(pr?.pressureMsl) ? round(pr.pressureMsl, 1) : "", finite(state.surface?.current?.pressure_msl) ? round(state.surface.current.pressure_msl, 1) : "", p.source]);
       }
     } else {
       const step = Number(mode);
@@ -961,12 +1007,13 @@
         const p = interpolateAt(points, agl);
         if (!p) continue;
         const w = kmToUser(p.speed);
-        rows.push([state.selectedAloftTime, round(p.targetAgl ?? p.agl), round(p.msl), w.value, w.unit, round(p.dir), dirText(p.dir), round(p.cloud), round(p.temp, 1), p.interpolated ? p.source : p.label]);
+        const pr = pressureForAloftTime(state.selectedAloftTime);
+        rows.push([state.selectedAloftTime, round(p.targetAgl ?? p.agl), round(p.msl), w.value, w.unit, round(p.dir), dirText(p.dir), round(p.cloud), round(p.temp, 1), finite(pr?.pressureMsl) ? round(pr.pressureMsl, 1) : "", finite(state.surface?.current?.pressure_msl) ? round(state.surface.current.pressure_msl, 1) : "", p.interpolated ? p.source : p.label]);
       }
     }
     const header = mode === "raw"
-      ? ["time_local", "level", "height_agl_m", "height_msl_m", "wind_speed", "wind_unit", "wind_from_deg", "wind_from_compass", "cloud_cover_pct", "temp_c", "source"]
-      : ["time_local", "target_agl_m", "height_msl_m", "wind_speed", "wind_unit", "wind_from_deg", "wind_from_compass", "cloud_cover_pct", "temp_c", "source"];
+      ? ["time_local", "level", "height_agl_m", "height_msl_m", "wind_speed", "wind_unit", "wind_from_deg", "wind_from_compass", "cloud_cover_pct", "temp_c", "forecast_msl_pressure_hpa", "current_msl_pressure_hpa", "source"]
+      : ["time_local", "target_agl_m", "height_msl_m", "wind_speed", "wind_unit", "wind_from_deg", "wind_from_compass", "cloud_cover_pct", "temp_c", "forecast_msl_pressure_hpa", "current_msl_pressure_hpa", "source"];
     const csv = [header, ...rows].map(row => row.map(cell => `"${String(cell ?? "").replaceAll('"', '""')}"`).join(",")).join("\n");
     navigator.clipboard?.writeText(csv).then(() => showNotice("Copied winds-aloft CSV to clipboard."), () => showNotice("Could not copy CSV in this browser.", "warn"));
   }
@@ -1048,18 +1095,20 @@
       showNotice("No valid wind profile rows are available to export.", "warn");
       return;
     }
-    const header = ["Altitude", "Velocity", "Direction", "StdDev"];
+    const header = ["altitude", "speed", "direction", "stddev"];
     const csvRows = rows.map(r => [
       roundedNumber(r.altitude, 0),
       roundedNumber(r.velocity, 2),
       roundedNumber(((r.direction % 360) + 360) % 360, 0),
       roundedNumber(r.stdDev, 2)
     ]);
-    const csv = [header, ...csvRows].map(row => row.map(csvCell).join(",")).join("\n");
+    // Keep OpenRocket export deliberately plain/unquoted because its importer matches
+    // the user-specified lowercase column names exactly: altitude,speed,direction,stddev.
+    const csv = [header, ...csvRows].map(row => row.join(",")).join("\n");
     const loc = safeFilenamePart(locationLabel(state.location));
     const time = safeFilenamePart(state.selectedAloftTime || "forecast");
     downloadTextFile(`openrocket_wind_${loc}_${time}.csv`, csv);
-    showNotice(`Downloaded OpenRocket wind CSV with ${rows.length} altitude rows. In OpenRocket, map Altitude = m AGL, Velocity = m/s, Direction = degrees, StdDev = 0.`);
+    showNotice(`Downloaded OpenRocket wind CSV with ${rows.length} altitude rows. It uses OpenRocket headers altitude,speed,direction,stddev.`);
   }
 
   el.searchBtn.addEventListener("click", () => {
