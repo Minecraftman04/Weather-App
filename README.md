@@ -18,5 +18,7 @@ A single-file static weather dashboard for GitHub Pages. It uses Open-Meteo in t
 - Winds aloft and cloud cover aloft come from Open-Meteo's ECMWF pressure-level forecast.
 - Interpolated wind/cloud-aloft rows are calculated between available pressure levels; they are not extra model levels.
 - The **Live weather** button uses browser GPS, switches to a 1-day forecast, selects the winds-aloft time nearest to now, and refreshes every 10 minutes while live mode is on.
+
+- The **OpenRocket CSV** button downloads the currently selected wind-aloft profile as `Altitude,Velocity,Direction,StdDev`, using metres AGL, m/s, degrees, and zero standard deviation. This is intended for OpenRocket 24.12+ multi-level wind CSV import.
 - Heights are shown as AGL and MSL where possible, using Open-Meteo terrain elevation.
 - This should not be used as the sole source for aviation, severe weather, marine, or mountain safety decisions.

@@ -925,8 +925,9 @@
         <div class="field time"><label for="aloftTimeSelect">Forecast time</label><select id="aloftTimeSelect">${options}</select></div>
         <div class="field"><label>Pressure levels</label><input readonly value="${escapeHtml(state.aloftLevels.join(", "))} hPa"></div>
         <div class="field"><label>&nbsp;</label><button class="secondary" id="copyCsvBtn" type="button">Copy CSV</button></div>
+        <div class="field"><label>&nbsp;</label><button class="secondary" id="openRocketCsvBtn" type="button">OpenRocket CSV</button></div>
       </div>
-      <p class="muted small">${state.liveMode ? "Live weather mode is on, so the aloft time is kept closest to now. " : ""}Heights are calculated from ECMWF geopotential height minus local terrain elevation. Cloud is pressure-level cloud cover %. Arrows point where the wind is blowing to; direction text/degrees are where it is coming from, meteorological style.</p>
+      <p class="muted small">${state.liveMode ? "Live weather mode is on, so the aloft time is kept closest to now. " : ""}Heights are calculated from ECMWF geopotential height minus local terrain elevation. Cloud is pressure-level cloud cover %. Arrows point where the wind is blowing to; direction text/degrees are where it is coming from, meteorological style. OpenRocket CSV uses Altitude,Velocity,Direction,StdDev with altitude in metres AGL and velocity in m/s.</p>
       <div class="tableWrap"><table><thead>${header}</thead><tbody>${rows || `<tr><td colspan="${emptyColspan}">No aloft rows available for this time/location.</td></tr>`}</tbody></table></div>
       <details>
         <summary>Raw pressure-level data near the ground to 3000 m</summary>
@@ -940,6 +941,7 @@
       renderAloft();
     });
     document.getElementById("copyCsvBtn")?.addEventListener("click", copyAloftCsv);
+    document.getElementById("openRocketCsvBtn")?.addEventListener("click", downloadOpenRocketCsv);
   }
 
   function copyAloftCsv() {
@@ -967,6 +969,97 @@
       : ["time_local", "target_agl_m", "height_msl_m", "wind_speed", "wind_unit", "wind_from_deg", "wind_from_compass", "cloud_cover_pct", "temp_c", "source"];
     const csv = [header, ...rows].map(row => row.map(cell => `"${String(cell ?? "").replaceAll('"', '""')}"`).join(",")).join("\n");
     navigator.clipboard?.writeText(csv).then(() => showNotice("Copied winds-aloft CSV to clipboard."), () => showNotice("Could not copy CSV in this browser.", "warn"));
+  }
+
+  function csvCell(value) {
+    return `"${String(value ?? "").replaceAll('"', '""')}"`;
+  }
+
+  function safeFilenamePart(value) {
+    return String(value || "wind_profile")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .slice(0, 60) || "wind_profile";
+  }
+
+  function roundedNumber(value, dp = 2) {
+    if (!finite(value)) return "";
+    return Number(value).toFixed(dp);
+  }
+
+  function dedupeByAltitude(rows) {
+    const seen = new Set();
+    return rows
+      .filter(r => finite(r.altitude) && finite(r.velocity) && finite(r.direction))
+      .sort((a, b) => a.altitude - b.altitude)
+      .filter(r => {
+        const key = Math.round(r.altitude);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+  }
+
+  function openRocketRows() {
+    const points = rawAloftPoints(state.selectedAloftTime);
+    const mode = el.aloftStepSelect.value;
+    const rows = [];
+    const surface = points.find(p => p.source === "surface" && finite(p.speed) && finite(p.dir))
+      || points.find(p => finite(p.speed) && finite(p.dir) && p.agl >= 0);
+
+    // OpenRocket uses launch-site altitude, so export AGL. Add 0 m using the 10 m surface wind
+    // where available so the profile starts at ground level instead of its first model height.
+    if (surface) rows.push({ altitude: 0, velocity: surface.speed, direction: surface.dir, stdDev: 0 });
+
+    if (mode === "raw") {
+      for (const p of points) {
+        if (p.agl < 0 || p.agl > MAX_AGL) continue;
+        rows.push({ altitude: p.agl, velocity: p.speed, direction: p.dir, stdDev: 0 });
+      }
+    } else {
+      const step = Number(mode);
+      const targets = [10];
+      for (let h = step; h <= MAX_AGL; h += step) targets.push(h);
+      for (const agl of targets) {
+        const p = interpolateAt(points, agl);
+        if (!p) continue;
+        rows.push({ altitude: p.targetAgl ?? p.agl, velocity: p.speed, direction: p.dir, stdDev: 0 });
+      }
+    }
+    return dedupeByAltitude(rows);
+  }
+
+  function downloadTextFile(filename, text, mime = "text/csv") {
+    const blob = new Blob([text], { type: `${mime};charset=utf-8` });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function downloadOpenRocketCsv() {
+    const rows = openRocketRows();
+    if (!rows.length) {
+      showNotice("No valid wind profile rows are available to export.", "warn");
+      return;
+    }
+    const header = ["Altitude", "Velocity", "Direction", "StdDev"];
+    const csvRows = rows.map(r => [
+      roundedNumber(r.altitude, 0),
+      roundedNumber(r.velocity, 2),
+      roundedNumber(((r.direction % 360) + 360) % 360, 0),
+      roundedNumber(r.stdDev, 2)
+    ]);
+    const csv = [header, ...csvRows].map(row => row.map(csvCell).join(",")).join("\n");
+    const loc = safeFilenamePart(locationLabel(state.location));
+    const time = safeFilenamePart(state.selectedAloftTime || "forecast");
+    downloadTextFile(`openrocket_wind_${loc}_${time}.csv`, csv);
+    showNotice(`Downloaded OpenRocket wind CSV with ${rows.length} altitude rows. In OpenRocket, map Altitude = m AGL, Velocity = m/s, Direction = degrees, StdDev = 0.`);
   }
 
   el.searchBtn.addEventListener("click", () => {
