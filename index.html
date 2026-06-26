@@ -298,7 +298,7 @@
     <header>
       <div>
         <h1>Weather + Winds Aloft</h1>
-        <p class="subtitle">A static forecast dashboard for GitHub Pages. Search a place, view current and future surface weather, then inspect winds aloft up to 3000 m AGL using ECMWF pressure-level wind data.</p>
+        <p class="subtitle">A static forecast dashboard for GitHub Pages. Search a place, view current and future surface weather, then inspect winds and cloud cover aloft up to 3000 m AGL using ECMWF pressure-level data.</p>
       </div>
       <section class="searchPanel" aria-label="Location search">
         <div class="searchGrid">
@@ -353,11 +353,12 @@
         </article>
         <article class="card">
           <h2>About the aloft data</h2>
-          <p class="small muted">Pressure-level winds are model-level data, not observations. The 100 m / 250 m / 500 m views interpolate between the available pressure levels; they make the table easier to read but do not add extra real model detail.</p>
+          <p class="small muted">Pressure-level winds and cloud cover are model-level data, not observations. Cloud cover at pressure levels is approximated from relative humidity. The 100 m / 250 m / 500 m views interpolate between the available pressure levels; they make the table easier to read but do not add extra real model detail.</p>
           <div class="chips">
             <span class="chip">Height: AGL + MSL</span>
             <span class="chip">Limit: 3000 m AGL</span>
             <span class="chip">Default: knots</span>
+            <span class="chip">Cloud at each level</span>
           </div>
         </article>
       </section>
@@ -613,7 +614,7 @@
   function aloftVariables(levels) {
     const out = [];
     for (const level of levels) {
-      out.push(`wind_speed_${level}hPa`, `wind_direction_${level}hPa`, `geopotential_height_${level}hPa`, `temperature_${level}hPa`);
+      out.push(`wind_speed_${level}hPa`, `wind_direction_${level}hPa`, `geopotential_height_${level}hPa`, `temperature_${level}hPa`, `cloud_cover_${level}hPa`);
     }
     return out;
   }
@@ -773,7 +774,8 @@
       msl: elevation + 10,
       speed: h.wind_speed_10m?.[idx],
       dir: h.wind_direction_10m?.[idx],
-      temp: h.temperature_2m?.[idx]
+      temp: h.temperature_2m?.[idx],
+      cloud: h.cloud_cover?.[idx]
     };
   }
 
@@ -791,10 +793,11 @@
       const speed = data[`wind_speed_${level}hPa`]?.[idx];
       const dir = data[`wind_direction_${level}hPa`]?.[idx];
       const temp = data[`temperature_${level}hPa`]?.[idx];
+      const cloud = data[`cloud_cover_${level}hPa`]?.[idx];
       if ([hgt, speed, dir].every(finite)) {
         points.push({
           label: `${level} hPa`, source: "pressure", pressure: level,
-          msl: hgt, agl: hgt - elevation, speed, dir, temp
+          msl: hgt, agl: hgt - elevation, speed, dir, temp, cloud
         });
       }
     }
@@ -837,6 +840,7 @@
       pressure: null, targetAgl: agl, agl, msl: lerp(lower.msl, upper.msl, f),
       speed: wind.speed, dir: wind.dir,
       temp: finite(lower.temp) && finite(upper.temp) ? lerp(lower.temp, upper.temp, f) : null,
+      cloud: finite(lower.cloud) && finite(upper.cloud) ? lerp(lower.cloud, upper.cloud, f) : null,
       interpolated: true
     };
   }
@@ -856,6 +860,7 @@
           <td>${round(p.agl)} m</td>
           <td>${round(p.msl)} m</td>
           <td>${windCell(p)}</td>
+          <td>${round(p.cloud)}%</td>
           <td>${round(p.temp, 1)}°C</td>
           <td>${p.agl < 0 ? "below local ground" : "direct model/surface"}</td>
         </tr>`).join("");
@@ -867,6 +872,7 @@
       <td>${round(p.targetAgl ?? p.agl)} m</td>
       <td>${round(p.msl)} m</td>
       <td>${windCell(p)}</td>
+      <td>${round(p.cloud)}%</td>
       <td>${round(p.temp, 1)}°C</td>
       <td>${escapeHtml(p.interpolated ? `interpolated: ${p.source}` : p.label)}</td>
     </tr>`).join("");
@@ -884,9 +890,10 @@
     const points = rawAloftPoints(state.selectedAloftTime);
     const mode = el.aloftStepSelect.value;
     const rows = aloftRows(points, mode);
+    const emptyColspan = mode === "raw" ? 7 : 6;
     const header = mode === "raw"
-      ? `<tr><th>Level</th><th>Height AGL</th><th>Height MSL</th><th>Wind</th><th>Temp</th><th>Source</th></tr>`
-      : `<tr><th>Target height AGL</th><th>Height MSL</th><th>Wind</th><th>Temp</th><th>Source</th></tr>`;
+      ? `<tr><th>Level</th><th>Height AGL</th><th>Height MSL</th><th>Wind</th><th>Cloud</th><th>Temp</th><th>Source</th></tr>`
+      : `<tr><th>Target height AGL</th><th>Height MSL</th><th>Wind</th><th>Cloud</th><th>Temp</th><th>Source</th></tr>`;
     el.aloftCard.innerHTML = `
       <h2>Winds aloft to ${MAX_AGL} m AGL</h2>
       <div class="toolbar">
@@ -894,12 +901,12 @@
         <div class="field"><label>Pressure levels</label><input readonly value="${escapeHtml(state.aloftLevels.join(", "))} hPa"></div>
         <div class="field"><label>&nbsp;</label><button class="secondary" id="copyCsvBtn" type="button">Copy CSV</button></div>
       </div>
-      <p class="muted small">Heights are calculated from ECMWF geopotential height minus local terrain elevation. Arrows point where the wind is blowing to; direction text/degrees are where it is coming from, meteorological style.</p>
-      <div class="tableWrap"><table><thead>${header}</thead><tbody>${rows || `<tr><td colspan="6">No aloft rows available for this time/location.</td></tr>`}</tbody></table></div>
+      <p class="muted small">Heights are calculated from ECMWF geopotential height minus local terrain elevation. Cloud is pressure-level cloud cover %. Arrows point where the wind is blowing to; direction text/degrees are where it is coming from, meteorological style.</p>
+      <div class="tableWrap"><table><thead>${header}</thead><tbody>${rows || `<tr><td colspan="${emptyColspan}">No aloft rows available for this time/location.</td></tr>`}</tbody></table></div>
       <details>
         <summary>Raw pressure-level data near the ground to 3000 m</summary>
         <div class="tableWrap" style="margin-top:10px"><table>
-          <thead><tr><th>Level</th><th>Height AGL</th><th>Height MSL</th><th>Wind</th><th>Temp</th><th>Source</th></tr></thead>
+          <thead><tr><th>Level</th><th>Height AGL</th><th>Height MSL</th><th>Wind</th><th>Cloud</th><th>Temp</th><th>Source</th></tr></thead>
           <tbody>${aloftRows(points, "raw")}</tbody>
         </table></div>
       </details>`;
@@ -917,7 +924,7 @@
     if (mode === "raw") {
       for (const p of points.filter(p => p.source === "surface" || (p.agl >= -100 && p.agl <= MAX_AGL + 350))) {
         const w = kmToUser(p.speed);
-        rows.push([state.selectedAloftTime, p.label, round(p.agl), round(p.msl), w.value, w.unit, round(p.dir), dirText(p.dir), round(p.temp, 1), p.source]);
+        rows.push([state.selectedAloftTime, p.label, round(p.agl), round(p.msl), w.value, w.unit, round(p.dir), dirText(p.dir), round(p.cloud), round(p.temp, 1), p.source]);
       }
     } else {
       const step = Number(mode);
@@ -927,12 +934,12 @@
         const p = interpolateAt(points, agl);
         if (!p) continue;
         const w = kmToUser(p.speed);
-        rows.push([state.selectedAloftTime, round(p.targetAgl ?? p.agl), round(p.msl), w.value, w.unit, round(p.dir), dirText(p.dir), round(p.temp, 1), p.interpolated ? p.source : p.label]);
+        rows.push([state.selectedAloftTime, round(p.targetAgl ?? p.agl), round(p.msl), w.value, w.unit, round(p.dir), dirText(p.dir), round(p.cloud), round(p.temp, 1), p.interpolated ? p.source : p.label]);
       }
     }
     const header = mode === "raw"
-      ? ["time_local", "level", "height_agl_m", "height_msl_m", "wind_speed", "wind_unit", "wind_from_deg", "wind_from_compass", "temp_c", "source"]
-      : ["time_local", "target_agl_m", "height_msl_m", "wind_speed", "wind_unit", "wind_from_deg", "wind_from_compass", "temp_c", "source"];
+      ? ["time_local", "level", "height_agl_m", "height_msl_m", "wind_speed", "wind_unit", "wind_from_deg", "wind_from_compass", "cloud_cover_pct", "temp_c", "source"]
+      : ["time_local", "target_agl_m", "height_msl_m", "wind_speed", "wind_unit", "wind_from_deg", "wind_from_compass", "cloud_cover_pct", "temp_c", "source"];
     const csv = [header, ...rows].map(row => row.map(cell => `"${String(cell ?? "").replaceAll('"', '""')}"`).join(",")).join("\n");
     navigator.clipboard?.writeText(csv).then(() => showNotice("Copied winds-aloft CSV to clipboard."), () => showNotice("Could not copy CSV in this browser.", "warn"));
   }
