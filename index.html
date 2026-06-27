@@ -567,19 +567,19 @@
           <div class="field">
             <label for="windUnitSelect">Wind</label>
             <select id="windUnitSelect">
-              <option value="kt" selected>knots</option>
+              <option value="kt">knots</option>
               <option value="ms">m/s</option>
               <option value="kmh">km/h</option>
-              <option value="mph">mph</option>
+              <option value="mph" selected>mph</option>
             </select>
           </div>
           <div class="field">
             <label for="aloftStepSelect">Aloft step</label>
             <select id="aloftStepSelect">
               <option value="100">100 m interpolated</option>
-              <option value="250" selected>250 m interpolated</option>
+              <option value="250">250 m interpolated</option>
               <option value="500">500 m interpolated</option>
-              <option value="raw">Raw pressure levels</option>
+              <option value="raw" selected>Raw pressure levels</option>
             </select>
           </div>
           <div class="field">
@@ -820,6 +820,27 @@
     });
     const data = await fetchJson(url);
     return data.results || [];
+  }
+
+  async function reverseGeocode(latitude, longitude) {
+    const url = "https://geocoding-api.open-meteo.com/v1/reverse?" + buildParams({
+      latitude,
+      longitude,
+      count: 1,
+      language: "en",
+      format: "json"
+    });
+    const data = await fetchJson(url);
+    const match = data.results?.[0];
+    if (!match) return null;
+    return {
+      ...match,
+      latitude,
+      longitude,
+      elevation: match.elevation ?? null,
+      gpsLatitude: latitude,
+      gpsLongitude: longitude
+    };
   }
 
   function locationLabel(loc) {
@@ -1531,16 +1552,27 @@
     }
     setBusy(true);
     showNotice(live ? "Waiting for GPS permission for live weather..." : "Waiting for GPS permission...");
-    navigator.geolocation.getCurrentPosition(pos => {
-      const loc = {
-        name: live ? "Live GPS location" : "GPS location",
-        latitude: pos.coords.latitude,
-        longitude: pos.coords.longitude,
-        country: "",
-        admin1: "",
-        elevation: null
-      };
-      loadLocation(loc);
+    navigator.geolocation.getCurrentPosition(async pos => {
+      const latitude = pos.coords.latitude;
+      const longitude = pos.coords.longitude;
+      let loc = null;
+      try {
+        loc = await reverseGeocode(latitude, longitude);
+      } catch (err) {
+        console.warn("Reverse geocoding failed", err);
+      }
+      if (!loc) {
+        loc = {
+          name: live ? "Live GPS location" : "GPS location",
+          latitude,
+          longitude,
+          country: "GPS coordinates",
+          admin1: "",
+          admin2: "",
+          elevation: null
+        };
+      }
+      await loadLocation(loc);
     }, err => {
       setBusy(false);
       if (live) stopLiveWeather();

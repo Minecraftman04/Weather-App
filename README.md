@@ -11,6 +11,9 @@ Static GitHub Pages weather dashboard using Open-Meteo. It includes current weat
 
 ## Notes
 
+- Default wind display is mph.
+- Default aloft step is raw pressure levels.
+- Live weather uses GPS coordinates for the forecast and reverse-geocodes the nearest town/city for the displayed label.
 - Winds aloft come from ECMWF pressure-level forecast data.
 - Interpolated 100 m / 250 m / 500 m wind rows are interpolated between returned pressure levels.
 - Rain nowcast rows use returned 15-minute precipitation steps; the page does not interpolate them into 1-minute values.
