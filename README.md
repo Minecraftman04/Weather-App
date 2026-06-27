@@ -1,26 +1,18 @@
 # Weather + Winds Aloft Dashboard
 
-A single-file static weather dashboard for GitHub Pages. It uses Open-Meteo in the browser, so there is no backend and no API key to hide.
+Static GitHub Pages weather dashboard using Open-Meteo. It includes current weather, daily/hourly forecast, 15-minute rain nowcast where available, sea-level pressure, pressure-level cloud cover, winds aloft to 3000 m AGL, and OpenRocket wind CSV export.
 
 ## Deploy on GitHub Pages
 
-1. Create a new GitHub repository, for example `weather-aloft`.
-2. Upload `index.html` to the root of the repository.
-3. Commit/push the file.
-4. Go to **Settings → Pages**.
-5. Under **Build and deployment**, choose **Deploy from a branch**.
-6. Select `main` and `/root`, then save.
-7. Open the Pages URL GitHub gives you.
+1. Upload `index.html` to a GitHub repository.
+2. Go to **Settings → Pages**.
+3. Set the source to deploy from your branch and root folder.
+4. Open the Pages URL after it finishes deploying.
 
 ## Notes
 
-- Normal current/hourly/daily weather comes from Open-Meteo's main Forecast API, including mean sea-level pressure and surface pressure.
-- The rain nowcast card requests Open-Meteo 15-minute precipitation data and displays only those returned timesteps. The page does not interpolate this into 1-minute values. Open-Meteo documents native 15-minute data for Central Europe and North America; other regions may be internally derived from hourly data.
-- Winds aloft and cloud cover aloft come from Open-Meteo's ECMWF pressure-level forecast. The winds-aloft card shows current/modelled MSL pressure plus forecast MSL pressure for the selected aloft time.
-- Interpolated wind/cloud-aloft rows are calculated between available pressure levels; they are not extra model levels.
-- The **Live weather** button uses browser GPS, switches to a 1-day forecast, selects the winds-aloft time nearest to now, and refreshes every 10 minutes while live mode is on.
-
-- The standard **Copy CSV** export includes forecast/current MSL pressure columns. The OpenRocket-specific export remains limited to OpenRocket-compatible wind-profile columns.
-- The **OpenRocket CSV** button downloads the currently selected wind-aloft profile using OpenRocket-compatible lowercase headers: `altitude,speed,direction,stddev`, with altitude in metres AGL, speed/stddev in m/s, direction in degrees, and zero standard deviation. Leave OpenRocket import column names as `altitude`, `speed`, `direction`, and `stddev`.
-- Heights are shown as AGL and MSL where possible, using Open-Meteo terrain elevation.
-- This should not be used as the sole source for aviation, severe weather, marine, or mountain safety decisions.
+- Winds aloft come from ECMWF pressure-level forecast data.
+- Interpolated 100 m / 250 m / 500 m wind rows are interpolated between returned pressure levels.
+- Rain nowcast rows use returned 15-minute precipitation steps; the page does not interpolate them into 1-minute values.
+- OpenRocket export uses lowercase headers: `altitude,speed,direction,stddev`.
+- This is not an aviation safety product.
