@@ -441,7 +441,12 @@
     }
     summary { cursor: pointer; color: var(--accent); font-weight: 800; }
 
-    #minuteRainCard { padding: 0; overflow: hidden; }
+    #minuteRainCard {
+      grid-column: 1 / -1;
+      padding: 0;
+      overflow: hidden;
+      width: 100%;
+    }
     .rainDropdown {
       margin: 0;
       border-top: 0;
@@ -487,6 +492,14 @@
       border-top: 1px solid rgba(173, 220, 230, 0.13);
     }
     .rainDropdownBody .chips { margin-top: 14px; }
+    .rainDropdownBody .tableWrap {
+      width: 100%;
+      max-width: 100%;
+    }
+    #minuteRainCard .rainDropdown[open] .rainDropdownBody {
+      max-height: min(72vh, 760px);
+      overflow: auto;
+    }
 
     footer {
       color: var(--muted-2);
@@ -535,9 +548,9 @@
 
         <div class="savedLocations" aria-label="Saved locations">
           <span class="savedLabel">Saved</span>
-          <button class="savedLocationBtn" data-saved-location="Hatfield, Hertfordshire, England, United Kingdom" type="button">Hatfield</button>
-          <button class="savedLocationBtn" data-saved-location="Bishop's Stortford, Hertfordshire, England, United Kingdom" type="button">Bishop's Stortford</button>
-          <button class="savedLocationBtn" data-saved-location="Machrihanish, Argyll and Bute, Scotland, United Kingdom" type="button">Machrihanish</button>
+          <button class="savedLocationBtn" data-saved-name="Hatfield" data-saved-admin2="Hertfordshire" data-saved-admin1="England" data-saved-country="United Kingdom" data-saved-lat="51.7634" data-saved-lon="-0.2242" type="button">Hatfield</button>
+          <button class="savedLocationBtn" data-saved-name="Bishop's Stortford" data-saved-admin2="Hertfordshire" data-saved-admin1="England" data-saved-country="United Kingdom" data-saved-lat="51.8719" data-saved-lon="0.1587" type="button">Bishop's Stortford</button>
+          <button class="savedLocationBtn" data-saved-name="Machrihanish" data-saved-admin2="Argyll and Bute" data-saved-admin1="Scotland" data-saved-country="United Kingdom" data-saved-lat="55.4234" data-saved-lon="-5.7357" type="button">Machrihanish</button>
         </div>
 
         <div class="controls">
@@ -604,20 +617,6 @@
         </article>
 
         <aside class="sideRail">
-          <article class="card" id="minuteRainCard">
-            <details class="rainDropdown">
-              <summary>
-                <span>
-                  <span class="rainSummaryTitle">Rain nowcast</span>
-                  <span class="rainSummarySub">15-minute rain forecast — hidden until opened</span>
-                </span>
-              </summary>
-              <div class="rainDropdownBody">
-                <p class="muted">Waiting for a location...</p>
-              </div>
-            </details>
-          </article>
-
           <article class="card">
             <h2>Aloft notes</h2>
             <p class="small muted">Pressure-level winds and cloud cover are model-level data, not observations. Cloud cover at pressure levels is approximated from relative humidity. The winds-aloft page also shows current/modelled sea-level pressure and the forecast sea-level pressure for the selected aloft time. The 100 m / 250 m / 500 m wind views interpolate between available pressure levels; the rain nowcast does not interpolate on this page and only shows returned 15-minute precipitation steps.</p>
@@ -630,6 +629,20 @@
             </div>
           </article>
         </aside>
+
+        <article class="card" id="minuteRainCard">
+          <details class="rainDropdown">
+            <summary>
+              <span>
+                <span class="rainSummaryTitle">Rain nowcast</span>
+                <span class="rainSummarySub">15-minute rain forecast — hidden until opened</span>
+              </span>
+            </summary>
+            <div class="rainDropdownBody">
+              <p class="muted">Waiting for a location...</p>
+            </div>
+          </details>
+        </article>
       </section>
 
       <article class="card" id="hourlyCard">
@@ -819,7 +832,13 @@
     if (!query.trim()) return;
     setBusy(true);
     try {
-      const results = await geocode(query);
+      let results = await geocode(query);
+      if (!results.length && query.includes(",")) {
+        const shortQuery = query.split(",")[0].trim();
+        if (shortQuery && shortQuery !== query.trim()) {
+          results = await geocode(shortQuery);
+        }
+      }
       if (!results.length) {
         showNotice("No matching location found. Try a nearby town, postcode, or latitude,longitude.", "warn");
         return;
@@ -1471,12 +1490,24 @@
       searchLocation(el.locationInput.value);
     }
   });
-  document.querySelectorAll("[data-saved-location]").forEach(button => {
+  function savedLocationFromButton(button) {
+    return {
+      name: button.dataset.savedName,
+      admin2: button.dataset.savedAdmin2,
+      admin1: button.dataset.savedAdmin1,
+      country: button.dataset.savedCountry,
+      latitude: Number(button.dataset.savedLat),
+      longitude: Number(button.dataset.savedLon),
+      elevation: null
+    };
+  }
+
+  document.querySelectorAll(".savedLocationBtn").forEach(button => {
     button.addEventListener("click", () => {
-      const query = button.dataset.savedLocation;
       stopLiveWeather();
-      el.locationInput.value = query;
-      searchLocation(query);
+      const savedLoc = savedLocationFromButton(button);
+      el.locationInput.value = locationLabel(savedLoc);
+      loadLocation(savedLoc);
     });
   });
   el.windUnitSelect.addEventListener("change", renderAll);
