@@ -501,6 +501,56 @@
       overflow: auto;
     }
 
+
+
+    #launchWindowCard {
+      grid-column: 1 / -1;
+    }
+    .launchBest {
+      display: grid;
+      grid-template-columns: minmax(240px, 1fr) minmax(190px, auto);
+      gap: 12px;
+      align-items: stretch;
+      padding: 14px;
+      border: 1px solid rgba(52, 211, 153, 0.30);
+      border-radius: 18px;
+      background:
+        linear-gradient(135deg, rgba(52, 211, 153, 0.13), rgba(34, 211, 238, 0.08)),
+        rgba(255,255,255,0.035);
+      margin-bottom: 12px;
+    }
+    .launchBestTime {
+      font-size: clamp(1.35rem, 3vw, 2.35rem);
+      line-height: 1.02;
+      letter-spacing: -0.055em;
+      font-weight: 930;
+      margin: 3px 0 8px;
+    }
+    .launchScoreBox {
+      display: grid;
+      place-items: center;
+      text-align: center;
+      min-width: 156px;
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(173, 220, 230, 0.16);
+      background: rgba(0, 0, 0, 0.16);
+    }
+    .launchScoreValue {
+      font-size: 2.2rem;
+      line-height: 1;
+      font-weight: 920;
+      letter-spacing: -0.06em;
+    }
+    .bestLaunchRow td {
+      background: rgba(52, 211, 153, 0.10);
+      color: #f4fffb;
+    }
+    @media (max-width: 720px) {
+      .launchBest { grid-template-columns: 1fr; }
+      .launchScoreBox { place-items: start; text-align: left; }
+    }
+
     footer {
       color: var(--muted-2);
       font-size: 0.86rem;
@@ -551,6 +601,7 @@
           <button class="savedLocationBtn" data-saved-name="Hatfield" data-saved-admin2="Hertfordshire" data-saved-admin1="England" data-saved-country="United Kingdom" data-saved-lat="51.7634" data-saved-lon="-0.2242" type="button">Hatfield</button>
           <button class="savedLocationBtn" data-saved-name="Bishop's Stortford" data-saved-admin2="Hertfordshire" data-saved-admin1="England" data-saved-country="United Kingdom" data-saved-lat="51.8719" data-saved-lon="0.1587" type="button">Bishop's Stortford</button>
           <button class="savedLocationBtn" data-saved-name="Machrihanish" data-saved-admin2="Argyll and Bute" data-saved-admin1="Scotland" data-saved-country="United Kingdom" data-saved-lat="55.4234" data-saved-lon="-5.7357" type="button">Machrihanish</button>
+          <button class="savedLocationBtn" data-saved-name="Campbeltown Airport" data-saved-admin2="Argyll and Bute" data-saved-admin1="Scotland" data-saved-country="United Kingdom" data-saved-lat="55.4372" data-saved-lon="-5.6864" data-launch-site="machx" type="button">Campbeltown Airport</button>
         </div>
 
         <div class="controls">
@@ -630,6 +681,11 @@
           </article>
         </aside>
 
+        <article class="card" id="launchWindowCard" hidden>
+          <h2>MachX launch window</h2>
+          <p class="muted">Select Campbeltown Airport to calculate the best 2-hour launch period from 10:00 to 17:00.</p>
+        </article>
+
         <article class="card" id="minuteRainCard">
           <details class="rainDropdown">
             <summary>
@@ -680,6 +736,7 @@
     currentCard: document.getElementById("currentCard"),
     dailyCard: document.getElementById("dailyCard"),
     minuteRainCard: document.getElementById("minuteRainCard"),
+    launchWindowCard: document.getElementById("launchWindowCard"),
     hourlyCard: document.getElementById("hourlyCard"),
     aloftCard: document.getElementById("aloftCard")
   };
@@ -998,8 +1055,9 @@
     renderCurrent();
     renderDaily();
     renderMinuteRain();
-    renderHourly();
     renderAloft();
+    renderLaunchWindow();
+    renderHourly();
   }
 
   function renderCurrent() {
@@ -1135,6 +1193,207 @@
         <thead><tr><th>Time</th><th>Total precip</th><th>Rate equivalent</th><th>Rain</th><th>Snowfall</th><th>Weather</th></tr></thead>
         <tbody>${rows}</tbody>
       </table></div>`, `${escapeHtml(nextWetText)} · 2 h ${round(total2h, 2)} mm · 4 h ${round(total4h, 2)} mm`);
+  }
+
+
+  function isMachXLaunchLocation() {
+    return state.location?.launchSite === "machx";
+  }
+
+  function avgNumber(values) {
+    const nums = values.filter(finite);
+    if (!nums.length) return null;
+    return nums.reduce((sum, value) => sum + value, 0) / nums.length;
+  }
+
+  function maxNumber(values) {
+    const nums = values.filter(finite);
+    return nums.length ? Math.max(...nums) : null;
+  }
+
+  function minNumber(values) {
+    const nums = values.filter(finite);
+    return nums.length ? Math.min(...nums) : null;
+  }
+
+  function msToMphNumber(ms) {
+    return finite(ms) ? ms * 2.23693629 : null;
+  }
+
+  function windowTimeLabel(date, startHour, durationHours = 2) {
+    const startIso = `${date}T${String(startHour).padStart(2, "0")}:00`;
+    const endHour = startHour + durationHours;
+    const endIso = `${date}T${String(endHour).padStart(2, "0")}:00`;
+    return `${formatLocal(startIso)}–${formatLocal(endIso, false)}`;
+  }
+
+  function worstWeatherPenalty(codes) {
+    let penalty = 0;
+    for (const raw of codes) {
+      const code = Number(raw);
+      if (!Number.isFinite(code)) continue;
+      if (code >= 95) penalty = Math.max(penalty, 120);      // Thunderstorms
+      else if (code >= 71 && code <= 86) penalty = Math.max(penalty, 80); // Snow / showers
+      else if (code >= 61 && code <= 67) penalty = Math.max(penalty, 45); // Rain
+      else if (code >= 51 && code <= 57) penalty = Math.max(penalty, 20); // Drizzle
+      else if (code === 45 || code === 48) penalty = Math.max(penalty, 35); // Fog
+    }
+    return penalty;
+  }
+
+  function vectorShearFromSurface(points) {
+    const valid = points
+      .filter(p => finite(p.agl) && p.agl >= 0 && p.agl <= MAX_AGL && finite(p.speed) && finite(p.dir))
+      .sort((a, b) => a.agl - b.agl);
+    if (valid.length < 2) return null;
+    const base = windToUV(valid[0].speed, valid[0].dir);
+    let maxDiff = 0;
+    for (const p of valid.slice(1)) {
+      const uv = windToUV(p.speed, p.dir);
+      const diff = Math.hypot(uv.u - base.u, uv.v - base.v);
+      if (diff > maxDiff) maxDiff = diff;
+    }
+    return maxDiff;
+  }
+
+  function launchWindowRating(score) {
+    if (score < 25) return "Good";
+    if (score < 55) return "Usable";
+    if (score < 90) return "Marginal";
+    return "Poor";
+  }
+
+  function machXLaunchCandidates() {
+    const h = state.surface?.hourly;
+    if (!h?.time?.length) return [];
+    const nowStamp = state.surface?.current?.time ? localStamp(state.surface.current.time) : Date.now();
+    const dates = [...new Set(h.time.map(t => parseLocalParts(t).date))];
+    const candidates = [];
+
+    for (const date of dates) {
+      for (let startHour = 10; startHour <= 15; startHour += 1) {
+        const endHour = startHour + 2;
+        const windowEndStamp = localStamp(`${date}T${String(endHour).padStart(2, "0")}:00`);
+        if (windowEndStamp <= nowStamp - 10 * 60 * 1000) continue;
+
+        const indexes = h.time
+          .map((time, index) => ({ time, index, parts: parseLocalParts(time) }))
+          .filter(x => x.parts.date === date && x.parts.hh >= startHour && x.parts.hh < endHour)
+          .map(x => x.index);
+        if (indexes.length < 2) continue;
+
+        const rainMm = indexes.reduce((sum, i) => sum + Number(h.precipitation?.[i] || 0), 0);
+        const popMax = maxNumber(indexes.map(i => h.precipitation_probability?.[i]));
+        const surfaceWindMax = maxNumber(indexes.map(i => h.wind_speed_10m?.[i]));
+        const surfaceWindAvg = avgNumber(indexes.map(i => h.wind_speed_10m?.[i]));
+        const gustMax = maxNumber(indexes.map(i => h.wind_gusts_10m?.[i]));
+        const cloudAvg = avgNumber(indexes.map(i => h.cloud_cover?.[i]));
+        const visibilityMin = minNumber(indexes.map(i => h.visibility?.[i]));
+        const weatherPenalty = worstWeatherPenalty(indexes.map(i => h.weather_code?.[i]));
+        const aloftMaxByHour = [];
+        const aloftShearByHour = [];
+
+        for (const i of indexes) {
+          const points = rawAloftPoints(h.time[i]).filter(p => finite(p.speed) && finite(p.dir) && finite(p.agl) && p.agl >= 0 && p.agl <= MAX_AGL);
+          aloftMaxByHour.push(maxNumber(points.map(p => p.speed)));
+          aloftShearByHour.push(vectorShearFromSurface(points));
+        }
+
+        const aloftMax = maxNumber(aloftMaxByHour);
+        const shearMax = maxNumber(aloftShearByHour);
+        const visibilityKm = finite(visibilityMin) ? visibilityMin / 1000 : null;
+
+        // Lower is better. This is a planning heuristic, not a safety rule: it favours dry,
+        // low-gust, low-shear, lower-cloud windows for a model/high-power rocket launch.
+        let score = 0;
+        score += rainMm * 90;
+        score += (popMax || 0) * 0.45;
+        score += Math.max(0, (surfaceWindMax || 0) - 5.36) * 5.0;  // >12 mph surface wind
+        score += Math.max(0, (gustMax || 0) - 8.94) * 4.5;          // >20 mph gusts
+        score += Math.max(0, (aloftMax || 0) - 11.18) * 2.2;        // >25 mph winds aloft
+        score += Math.max(0, (shearMax || 0) - 6.0) * 2.0;
+        score += (cloudAvg || 0) * 0.06;
+        if (finite(visibilityMin) && visibilityMin < 5000) score += (5000 - visibilityMin) / 120;
+        score += weatherPenalty;
+
+        candidates.push({
+          date,
+          startHour,
+          endHour,
+          label: windowTimeLabel(date, startHour, 2),
+          score,
+          rating: launchWindowRating(score),
+          rainMm,
+          popMax,
+          surfaceWindMax,
+          surfaceWindAvg,
+          gustMax,
+          cloudAvg,
+          visibilityKm,
+          aloftMax,
+          shearMax,
+          weatherPenalty
+        });
+      }
+    }
+    return candidates.sort((a, b) => a.score - b.score);
+  }
+
+  function renderLaunchWindow() {
+    const card = el.launchWindowCard;
+    if (!card) return;
+    if (!isMachXLaunchLocation()) {
+      card.hidden = true;
+      return;
+    }
+    card.hidden = false;
+    const candidates = machXLaunchCandidates();
+    if (!candidates.length) {
+      card.innerHTML = `
+        <h2>MachX launch window</h2>
+        <p class="muted">No complete 2-hour launch windows were found between 10:00 and 17:00 in the currently loaded forecast. Increase the forecast length or try again later.</p>`;
+      return;
+    }
+
+    const best = candidates[0];
+    const topRows = candidates.slice(0, 12).map(c => `
+      <tr class="${c === best ? "bestLaunchRow" : ""}">
+        <td><strong>${escapeHtml(c.label)}</strong></td>
+        <td>${round(c.score, 0)} · ${escapeHtml(c.rating)}</td>
+        <td>${round(msToMphNumber(c.surfaceWindAvg), 0)} / ${round(msToMphNumber(c.surfaceWindMax), 0)} mph</td>
+        <td>${round(msToMphNumber(c.gustMax), 0)} mph</td>
+        <td>${round(msToMphNumber(c.aloftMax), 0)} mph</td>
+        <td>${round(msToMphNumber(c.shearMax), 0)} mph</td>
+        <td>${round(c.rainMm, 2)} mm · ${round(c.popMax)}%</td>
+        <td>${round(c.cloudAvg)}%</td>
+        <td>${finite(c.visibilityKm) ? `${round(c.visibilityKm, 1)} km` : "—"}</td>
+      </tr>`).join("");
+
+    card.innerHTML = `
+      <h2>MachX launch window</h2>
+      <div class="launchBest">
+        <div>
+          <p class="muted small" style="margin:0">Best 2-hour period between 10:00 and 17:00 at Campbeltown Airport</p>
+          <div class="launchBestTime">${escapeHtml(best.label)}</div>
+          <div class="chips">
+            <span class="chip">10 m wind avg/max ${round(msToMphNumber(best.surfaceWindAvg), 0)}/${round(msToMphNumber(best.surfaceWindMax), 0)} mph</span>
+            <span class="chip">Gust max ${round(msToMphNumber(best.gustMax), 0)} mph</span>
+            <span class="chip">Aloft max ${round(msToMphNumber(best.aloftMax), 0)} mph</span>
+            <span class="chip">Shear from surface ${round(msToMphNumber(best.shearMax), 0)} mph</span>
+            <span class="chip">Rain ${round(best.rainMm, 2)} mm · ${round(best.popMax)}%</span>
+          </div>
+        </div>
+        <div class="launchScoreBox" title="Lower score is better">
+          <span class="muted small">Suitability</span>
+          <span class="launchScoreValue">${round(best.score, 0)}</span>
+          <strong>${escapeHtml(best.rating)}</strong>
+        </div>
+      </div>
+      <p class="muted small">This is a weather-ranking helper for MachX only: lower score is better. It favours dry windows, lower surface wind/gusts, lower winds aloft, lower vertical wind shear, better visibility, and less cloud. It is not a launch permission/safety decision, and you still need your normal range, NOTAM, airspace, landowner, recovery, and club procedures.</p>
+      <div class="tableWrap"><table>
+        <thead><tr><th>Window</th><th>Score</th><th>10 m wind avg/max</th><th>Gust max</th><th>Aloft max</th><th>Shear</th><th>Rain / chance</th><th>Cloud</th><th>Visibility</th></tr></thead>
+        <tbody>${topRows}</tbody>
+      </table></div>`;
   }
 
   function renderHourly() {
@@ -1519,7 +1778,8 @@
       country: button.dataset.savedCountry,
       latitude: Number(button.dataset.savedLat),
       longitude: Number(button.dataset.savedLon),
-      elevation: null
+      elevation: null,
+      launchSite: button.dataset.launchSite || ""
     };
   }
 
