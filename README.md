@@ -18,5 +18,5 @@ Static GitHub Pages weather dashboard using Open-Meteo. It includes current weat
 - Interpolated 100 m / 250 m / 500 m wind rows are interpolated between returned pressure levels.
 - Rain nowcast rows use returned 15-minute precipitation steps; the page does not interpolate them into 1-minute values.
 - OpenRocket export uses lowercase headers: `altitude,speed,direction,stddev`.
-- Campbeltown Airport saved location includes a MachX launch-window helper that ranks selectable 30 min, 1h, 2h, 3h, and 4h launch windows between 10:00 and 17:00 using forecast rain, surface wind/gusts, winds aloft, shear, cloud, and visibility.
+- Campbeltown Airport saved location includes a MachX launch-window helper that ranks selectable 30 min, 1h, 2h, 3h, and 4h launch windows between 09:30 and 22:00 using forecast rain, surface wind/gusts, winds aloft, shear, cloud, and visibility.
 - This is not an aviation safety product.

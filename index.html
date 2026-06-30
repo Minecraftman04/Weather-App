@@ -698,7 +698,7 @@
 
         <article class="card" id="launchWindowCard" hidden>
           <h2>MachX launch window</h2>
-          <p class="muted">Select Campbeltown Airport to calculate the best launch period from 10:00 to 17:00.</p>
+          <p class="muted">Select Campbeltown Airport to calculate the best launch period from 09:30 to 22:00.</p>
         </article>
 
         <article class="card" id="minuteRainCard">
@@ -1345,8 +1345,8 @@
     const candidates = [];
 
     for (const date of dates) {
-      const firstStartMinute = 10 * 60;
-      const lastStartMinute = 17 * 60 - durationMinutes;
+      const firstStartMinute = 9 * 60 + 30;
+      const lastStartMinute = 22 * 60 - durationMinutes;
       if (lastStartMinute < firstStartMinute) continue;
 
       for (let startMinute = firstStartMinute; startMinute <= lastStartMinute; startMinute += 30) {
@@ -1436,11 +1436,11 @@
         <div class="launchHeader">
           <div>
             <h2>MachX launch window</h2>
-            <p class="muted small" style="margin:0">Choose the period length, then the page ranks windows from 10:00 to 17:00 at Campbeltown Airport.</p>
+            <p class="muted small" style="margin:0">Choose the period length, then the page ranks windows from 09:30 to 22:00 at Campbeltown Airport.</p>
           </div>
           ${launchDurationSelectHtml()}
         </div>
-        <p class="muted">No complete ${escapeHtml(durationLabel)} launch windows were found between 10:00 and 17:00 in the currently loaded forecast. Increase the forecast length or try again later.</p>`;
+        <p class="muted">No complete ${escapeHtml(durationLabel)} launch windows were found between 09:30 and 22:00 in the currently loaded forecast. Increase the forecast length or try again later.</p>`;
       bindLaunchDurationSelect();
       return;
     }
@@ -1463,7 +1463,7 @@
       <div class="launchHeader">
         <div>
           <h2>MachX launch window</h2>
-          <p class="muted small" style="margin:0">Best ${escapeHtml(durationLabel)} period between 10:00 and 17:00 at Campbeltown Airport</p>
+          <p class="muted small" style="margin:0">Best ${escapeHtml(durationLabel)} period between 09:30 and 22:00 at Campbeltown Airport</p>
         </div>
         ${launchDurationSelectHtml()}
       </div>
