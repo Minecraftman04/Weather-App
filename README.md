@@ -13,10 +13,11 @@ Static GitHub Pages weather dashboard using Open-Meteo. It includes current weat
 
 - Default wind display is mph.
 - Default aloft step is raw pressure levels.
+- Sun mode is a high-contrast light theme for outdoor/bright sunlight use and is saved in the browser.
 - Live weather uses GPS coordinates for the forecast and reverse-geocodes the nearest town/city for the displayed label.
 - Winds aloft come from ECMWF pressure-level forecast data.
 - Interpolated 100 m / 250 m / 500 m wind rows are interpolated between returned pressure levels.
 - Rain nowcast rows use returned 15-minute precipitation steps; the page does not interpolate them into 1-minute values.
 - OpenRocket export uses lowercase headers: `altitude,speed,direction,stddev`.
-- Campbeltown Airport saved location includes a MachX launch-window helper that ranks selectable 30 min, 1h, 2h, 3h, and 4h launch windows between 09:30 and 22:00 using forecast rain, surface wind/gusts, winds aloft, shear, cloud, and visibility.
+- Campbeltown Airport saved location includes a MachX launch-window helper that ranks selectable 30 min, 1h, 2h, 3h, and 4h launch windows between 09:30 and 22:00 using forecast rain, surface wind/gusts, winds aloft, shear, cloud, and visibility. It also shows the best continuous usable stretch and stops at the first bad/unusable score, with an expandable explanation of the score calculation.
 - This is not an aviation safety product.

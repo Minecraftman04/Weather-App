@@ -54,6 +54,141 @@
       mask-image: linear-gradient(to bottom, black, transparent 80%);
     }
 
+    body.sunMode {
+      color-scheme: light;
+      --bg: #f8fbff;
+      --bg-2: #eef6ff;
+      --panel: rgba(255, 255, 255, 0.96);
+      --panel-strong: rgba(255, 255, 255, 0.99);
+      --panel-soft: rgba(13, 52, 82, 0.055);
+      --border: rgba(20, 72, 105, 0.22);
+      --border-strong: rgba(10, 104, 160, 0.46);
+      --text: #0b1722;
+      --muted: #405b6c;
+      --muted-2: #5f7481;
+      --accent: #006bb6;
+      --accent-2: #008a7a;
+      --accent-3: #2454e8;
+      --warn: #9a6100;
+      --bad: #b4233c;
+      --shadow: 0 18px 58px rgba(7, 32, 52, 0.16);
+      --shadow-soft: 0 8px 24px rgba(7, 32, 52, 0.12);
+      background:
+        radial-gradient(circle at 7% 0%, rgba(0, 107, 182, 0.13), transparent 31rem),
+        radial-gradient(circle at 95% 4%, rgba(0, 138, 122, 0.10), transparent 30rem),
+        linear-gradient(180deg, #ffffff 0%, #f1f8ff 48%, #e7f0f8 100%);
+    }
+    body.sunMode::before {
+      opacity: 0.20;
+      background-image:
+        linear-gradient(rgba(10, 75, 120, 0.13) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(10, 75, 120, 0.13) 1px, transparent 1px);
+      mask-image: linear-gradient(to bottom, black, transparent 78%);
+    }
+    body.sunMode .heroCopy {
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.98), rgba(230,244,255,0.94)),
+        radial-gradient(circle at 14% 15%, rgba(0, 107, 182, 0.14), transparent 16rem);
+    }
+    body.sunMode .heroCopy::after {
+      border-color: rgba(0, 107, 182, 0.20);
+      box-shadow: 0 0 0 44px rgba(0, 107, 182, 0.04), 0 0 0 90px rgba(0, 138, 122, 0.03);
+    }
+    body.sunMode .kicker {
+      background: rgba(0, 107, 182, 0.08);
+      border-color: rgba(0, 107, 182, 0.25);
+      color: #074f82;
+    }
+    body.sunMode .heroStat,
+    body.sunMode .savedLocations,
+    body.sunMode .dayCard,
+    body.sunMode .launchRunBox,
+    body.sunMode .launchScoreExplanation {
+      background: rgba(9, 56, 90, 0.055);
+      border-color: rgba(20, 72, 105, 0.16);
+      color: var(--text);
+    }
+    body.sunMode .searchPanel,
+    body.sunMode .card,
+    body.sunMode .notice {
+      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(243,249,255,0.96));
+      backdrop-filter: none;
+    }
+    body.sunMode input,
+    body.sunMode select {
+      background: #ffffff;
+      color: var(--text);
+      border-color: rgba(20, 72, 105, 0.28);
+      box-shadow: 0 1px 0 rgba(255,255,255,0.8);
+    }
+    body.sunMode input:focus,
+    body.sunMode select:focus {
+      border-color: rgba(0, 107, 182, 0.70);
+      box-shadow: 0 0 0 4px rgba(0, 107, 182, 0.14);
+    }
+    body.sunMode button {
+      color: #ffffff;
+      background: linear-gradient(135deg, #006bb6, #008a7a);
+      box-shadow: 0 10px 22px rgba(0, 107, 182, 0.18);
+    }
+    body.sunMode button.secondary,
+    body.sunMode .savedLocationBtn,
+    body.sunMode .resultBtn {
+      background: #ffffff;
+      color: #0b1722;
+      border-color: rgba(20, 72, 105, 0.28);
+      box-shadow: none;
+    }
+    body.sunMode .savedLocationBtn:hover,
+    body.sunMode button.secondary:hover {
+      background: #eaf6ff;
+      border-color: rgba(0, 107, 182, 0.45);
+    }
+    body.sunMode .themeToggleActive {
+      background: linear-gradient(135deg, #ffcf32, #ff8a00);
+      color: #201200;
+      border-color: rgba(143, 84, 0, 0.30);
+      box-shadow: 0 10px 22px rgba(255, 138, 0, 0.18);
+    }
+    body.sunMode .notice { color: var(--text); }
+    body.sunMode .notice.error { color: #8f1230; background: #fff4f6; }
+    body.sunMode .notice.warn { color: #6c4300; background: #fff8e6; }
+    body.sunMode .tableWrap {
+      background: #ffffff;
+      border-color: rgba(20, 72, 105, 0.22);
+    }
+    body.sunMode th {
+      background: #e7f2fb;
+      color: #16445e;
+      border-bottom-color: rgba(20, 72, 105, 0.18);
+    }
+    body.sunMode td { border-bottom-color: rgba(20, 72, 105, 0.11); }
+    body.sunMode tr:hover td { background: rgba(0, 107, 182, 0.055); }
+    body.sunMode .chip,
+    body.sunMode .windArrow,
+    body.sunMode .rainIntensity {
+      background: rgba(0, 107, 182, 0.08);
+      border-color: rgba(0, 107, 182, 0.22);
+      color: #0b1722;
+    }
+    body.sunMode .bar { background: linear-gradient(90deg, #006bb6, #008a7a); }
+    body.sunMode .rainRow td { background: rgba(0, 107, 182, 0.075); }
+    body.sunMode .rainDropdown > summary::after {
+      background: linear-gradient(135deg, #006bb6, #008a7a);
+      color: #ffffff;
+    }
+    body.sunMode .rainDropdownBody,
+    body.sunMode details {
+      border-top-color: rgba(20, 72, 105, 0.14);
+    }
+    body.sunMode .launchBest {
+      background: linear-gradient(135deg, rgba(0, 138, 122, 0.10), rgba(0, 107, 182, 0.08));
+      border-color: rgba(0, 138, 122, 0.28);
+    }
+    body.sunMode .launchScoreBox { background: rgba(255,255,255,0.72); }
+    body.sunMode .bestLaunchRow td { background: rgba(0, 138, 122, 0.09); color: #073624; }
+    body.sunMode .badLaunchRow td { background: rgba(180, 35, 60, 0.09); color: #5f1020; }
+
     a { color: var(--accent); }
     button, input, select { font: inherit; }
 
@@ -203,7 +338,7 @@
 
     .controls {
       display: grid;
-      grid-template-columns: repeat(5, minmax(120px, 1fr));
+      grid-template-columns: repeat(6, minmax(120px, 1fr));
       gap: 10px;
       align-items: end;
     }
@@ -561,6 +696,30 @@
       background: rgba(52, 211, 153, 0.10);
       color: #f4fffb;
     }
+    .badLaunchRow td {
+      background: rgba(248, 113, 113, 0.12);
+      color: #ffecec;
+      border-top: 1px solid rgba(248, 113, 113, 0.28);
+    }
+    .launchRunBox, .launchScoreExplanation {
+      margin: 12px 0;
+      padding: 14px;
+      border: 1px solid rgba(173, 220, 230, 0.14);
+      border-radius: 18px;
+      background: rgba(255,255,255,0.035);
+    }
+    .launchRunBox strong { color: var(--text); }
+    .launchScoreExplanation summary {
+      cursor: pointer;
+      font-weight: 850;
+      color: var(--text);
+    }
+    .launchScoreExplanation ul {
+      margin: 10px 0 0 18px;
+      color: var(--muted);
+      line-height: 1.55;
+      padding: 0;
+    }
     @media (max-width: 720px) {
       .launchBest { grid-template-columns: 1fr; }
       .launchScoreBox { place-items: start; text-align: left; }
@@ -650,6 +809,10 @@
           </div>
           <div class="field">
             <label>&nbsp;</label>
+            <button class="secondary" id="themeBtn" type="button" title="Toggle high-contrast light mode for bright sunlight">Sun mode</button>
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
             <button class="secondary" id="gpsBtn" type="button">Use GPS</button>
           </div>
           <div class="field">
@@ -698,7 +861,7 @@
 
         <article class="card" id="launchWindowCard" hidden>
           <h2>MachX launch window</h2>
-          <p class="muted">Select Campbeltown Airport to calculate the best launch period from 09:30 to 22:00.</p>
+          <p class="muted">Select Campbeltown Airport to calculate the best launch period and continuous usable stretch from 09:30 to 22:00.</p>
         </article>
 
         <article class="card" id="minuteRainCard">
@@ -743,6 +906,7 @@
     searchBtn: document.getElementById("searchBtn"),
     gpsBtn: document.getElementById("gpsBtn"),
     liveBtn: document.getElementById("liveBtn"),
+    themeBtn: document.getElementById("themeBtn"),
     daysSelect: document.getElementById("daysSelect"),
     windUnitSelect: document.getElementById("windUnitSelect"),
     aloftStepSelect: document.getElementById("aloftStepSelect"),
@@ -781,6 +945,16 @@
     85: "Snow showers", 86: "Heavy snow showers",
     95: "Thunderstorm", 96: "Thunderstorm + hail", 99: "Severe thunderstorm + hail"
   };
+
+  function setSunMode(on) {
+    document.body.classList.toggle("sunMode", Boolean(on));
+    el.themeBtn.classList.toggle("themeToggleActive", Boolean(on));
+    el.themeBtn.textContent = on ? "Sun mode: on" : "Sun mode";
+    el.themeBtn.setAttribute("aria-pressed", on ? "true" : "false");
+    localStorage.setItem("weatherAloftSunMode", on ? "1" : "0");
+  }
+
+  setSunMode(localStorage.getItem("weatherAloftSunMode") === "1");
 
   function setBusy(isBusy) {
     el.searchBtn.disabled = isBusy;
@@ -1309,11 +1483,17 @@
     return maxDiff;
   }
 
+  const LAUNCH_UNUSABLE_SCORE = 55;
+
   function launchWindowRating(score) {
     if (score < 25) return "Good";
-    if (score < 55) return "Usable";
+    if (score < LAUNCH_UNUSABLE_SCORE) return "Usable";
     if (score < 90) return "Marginal";
     return "Poor";
+  }
+
+  function isLaunchWindowUsable(candidate) {
+    return finite(candidate?.score) && candidate.score < LAUNCH_UNUSABLE_SCORE;
   }
 
   function hourlyIndexesForWindow(h, date, startStamp, endStamp) {
@@ -1420,6 +1600,112 @@
     return candidates.sort((a, b) => a.score - b.score);
   }
 
+  function launchCandidatesChronological(candidates) {
+    return [...candidates].sort((a, b) => {
+      if (a.date !== b.date) return a.date.localeCompare(b.date);
+      return a.startMinute - b.startMinute;
+    });
+  }
+
+  function launchUsableRuns(candidates) {
+    const chronological = launchCandidatesChronological(candidates);
+    const runs = [];
+    let active = null;
+
+    for (const candidate of chronological) {
+      const usable = isLaunchWindowUsable(candidate);
+      const continues = active
+        && active.date === candidate.date
+        && candidate.startMinute === active.lastStartMinute + 30;
+
+      if (!usable) {
+        if (active) {
+          active.stopper = continues ? candidate : null;
+          runs.push(active);
+          active = null;
+        }
+        continue;
+      }
+
+      if (!active || !continues) {
+        if (active) runs.push(active);
+        active = { date: candidate.date, items: [], stopper: null, lastStartMinute: candidate.startMinute };
+      }
+
+      active.items.push(candidate);
+      active.lastStartMinute = candidate.startMinute;
+    }
+
+    if (active) runs.push(active);
+
+    return runs.map(run => {
+      const start = run.items[0];
+      const end = run.items[run.items.length - 1];
+      const startMinute = start.startMinute;
+      const endMinute = end.endMinute;
+      const durationMinutes = endMinute - startMinute;
+      const scores = run.items.map(item => item.score).filter(finite);
+      const avgScore = avgNumber(scores);
+      const maxScore = maxNumber(scores);
+      return {
+        ...run,
+        startMinute,
+        endMinute,
+        durationMinutes,
+        avgScore,
+        maxScore,
+        label: `${formatLocal(minuteOfDayToIso(run.date, startMinute))}–${formatLocal(minuteOfDayToIso(run.date, endMinute), false)}`
+      };
+    }).sort((a, b) => {
+      // Prefer the longest continuous usable stretch; if tied, prefer the lower average
+      // score, then the earlier time.
+      if (b.durationMinutes !== a.durationMinutes) return b.durationMinutes - a.durationMinutes;
+      if ((a.avgScore ?? 9999) !== (b.avgScore ?? 9999)) return (a.avgScore ?? 9999) - (b.avgScore ?? 9999);
+      if (a.date !== b.date) return a.date.localeCompare(b.date);
+      return a.startMinute - b.startMinute;
+    });
+  }
+
+  function formatDurationMinutes(minutes) {
+    if (!finite(minutes)) return "—";
+    const mins = Math.round(minutes);
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    if (h && m) return `${h}h ${m}m`;
+    if (h) return `${h}h`;
+    return `${m}m`;
+  }
+
+  function launchCandidateRow(c, best, extraLabel = "") {
+    const stop = extraLabel ? `<span class="chip" style="margin-left:6px">${escapeHtml(extraLabel)}</span>` : "";
+    return `
+      <tr class="${extraLabel ? "badLaunchRow" : c === best ? "bestLaunchRow" : ""}">
+        <td><strong>${escapeHtml(c.label)}</strong>${stop}</td>
+        <td>${round(c.score, 0)} · ${escapeHtml(c.rating)}</td>
+        <td>${round(msToMphNumber(c.surfaceWindAvg), 0)} / ${round(msToMphNumber(c.surfaceWindMax), 0)} mph</td>
+        <td>${round(msToMphNumber(c.gustMax), 0)} mph</td>
+        <td>${round(msToMphNumber(c.aloftMax), 0)} mph</td>
+        <td>${round(msToMphNumber(c.shearMax), 0)} mph</td>
+        <td>${round(c.rainMm, 2)} mm · ${round(c.popMax)}%</td>
+        <td>${round(c.cloudAvg)}%</td>
+        <td>${finite(c.visibilityKm) ? `${round(c.visibilityKm, 1)} km` : "—"}</td>
+      </tr>`;
+  }
+
+  function launchScoreExplanationHtml() {
+    return `
+      <details class="launchScoreExplanation">
+        <summary>How the launch score is calculated</summary>
+        <ul>
+          <li><strong>Lower is better.</strong> The score starts at 0 and adds weather penalties for the chosen window.</li>
+          <li>Biggest penalties come from rain amount, rain probability, strong 10 m wind, strong gusts, strong winds aloft up to 3000 m, and vertical wind shear from the surface.</li>
+          <li>Smaller penalties are added for cloud cover and visibility below 5 km. Rain, snow, fog, and thunderstorm weather codes add extra fixed penalties.</li>
+          <li>The wind thresholds used before penalties start are about <strong>12 mph</strong> surface wind, <strong>20 mph</strong> gusts, and <strong>25 mph</strong> winds aloft.</li>
+          <li>Ratings: <strong>Good</strong> &lt;25, <strong>Usable</strong> 25–54, <strong>Marginal/bad</strong> 55–89, <strong>Poor</strong> 90+. The continuous launch-window section stops when the next candidate reaches <strong>${LAUNCH_UNUSABLE_SCORE}+</strong>.</li>
+        </ul>
+      </details>`;
+  }
+
 
   function renderLaunchWindow() {
     const card = el.launchWindowCard;
@@ -1440,24 +1726,51 @@
           </div>
           ${launchDurationSelectHtml()}
         </div>
-        <p class="muted">No complete ${escapeHtml(durationLabel)} launch windows were found between 09:30 and 22:00 in the currently loaded forecast. Increase the forecast length or try again later.</p>`;
+        <p class="muted">No complete ${escapeHtml(durationLabel)} launch windows were found between 09:30 and 22:00 in the currently loaded forecast. Increase the forecast length or try again later.</p>
+        ${launchScoreExplanationHtml()}`;
       bindLaunchDurationSelect();
       return;
     }
 
     const best = candidates[0];
-    const topRows = candidates.slice(0, 12).map(c => `
-      <tr class="${c === best ? "bestLaunchRow" : ""}">
-        <td><strong>${escapeHtml(c.label)}</strong></td>
-        <td>${round(c.score, 0)} · ${escapeHtml(c.rating)}</td>
-        <td>${round(msToMphNumber(c.surfaceWindAvg), 0)} / ${round(msToMphNumber(c.surfaceWindMax), 0)} mph</td>
-        <td>${round(msToMphNumber(c.gustMax), 0)} mph</td>
-        <td>${round(msToMphNumber(c.aloftMax), 0)} mph</td>
-        <td>${round(msToMphNumber(c.shearMax), 0)} mph</td>
-        <td>${round(c.rainMm, 2)} mm · ${round(c.popMax)}%</td>
-        <td>${round(c.cloudAvg)}%</td>
-        <td>${finite(c.visibilityKm) ? `${round(c.visibilityKm, 1)} km` : "—"}</td>
-      </tr>`).join("");
+    const usableRuns = launchUsableRuns(candidates);
+    const bestRun = usableRuns[0] || null;
+    const chronological = launchCandidatesChronological(candidates);
+    const fallbackRows = chronological.slice(0, 18).map(c => launchCandidateRow(c, best)).join("");
+
+    let usableRunHtml = `
+      <div class="launchRunBox">
+        <strong>No usable continuous stretch found.</strong>
+        <p class="muted small" style="margin:6px 0 0">Every candidate window in the loaded 09:30–22:00 forecast is already ${LAUNCH_UNUSABLE_SCORE}+ / marginal or worse. The best individual option is still shown above for comparison.</p>
+      </div>`;
+    let runRows = fallbackRows;
+    let tableCaption = "Chronological launch windows";
+
+    if (bestRun) {
+      const stopperText = bestRun.stopper
+        ? `Stops before ${escapeHtml(bestRun.stopper.label)} because it becomes ${escapeHtml(bestRun.stopper.rating)} (${round(bestRun.stopper.score, 0)}).`
+        : "No bad/unusable score appears before the end of the loaded forecast range.";
+      const runStart = bestRun.items[0];
+      const runEnd = bestRun.items[bestRun.items.length - 1];
+      usableRunHtml = `
+        <div class="launchRunBox">
+          <strong>Continuous usable stretch until bad/unusable:</strong>
+          <div class="launchBestTime" style="font-size:clamp(1.15rem,2.4vw,1.9rem)">${escapeHtml(bestRun.label)}</div>
+          <div class="chips">
+            <span class="chip">Total stretch ${escapeHtml(formatDurationMinutes(bestRun.durationMinutes))}</span>
+            <span class="chip">Checked as ${escapeHtml(durationLabel)} windows</span>
+            <span class="chip">Average score ${round(bestRun.avgScore, 0)}</span>
+            <span class="chip">Worst usable score ${round(bestRun.maxScore, 0)}</span>
+            <span class="chip">First usable start ${escapeHtml(runStart.label)}</span>
+            <span class="chip">Last usable start ${escapeHtml(runEnd.label)}</span>
+          </div>
+          <p class="muted small" style="margin:10px 0 0">${stopperText}</p>
+        </div>`;
+      const runAndStopper = [...bestRun.items];
+      if (bestRun.stopper) runAndStopper.push(bestRun.stopper);
+      runRows = runAndStopper.map(c => launchCandidateRow(c, best, c === bestRun.stopper ? "first bad/unusable" : "")).join("");
+      tableCaption = "Usable sequence, plus first bad/unusable stop point";
+    }
 
     card.innerHTML = `
       <div class="launchHeader">
@@ -1485,10 +1798,13 @@
           <strong>${escapeHtml(best.rating)}</strong>
         </div>
       </div>
-      <p class="muted small">This is a weather-ranking helper for MachX only: lower score is better. It favours dry windows, lower surface wind/gusts, lower winds aloft, lower vertical wind shear, better visibility, and less cloud. Candidate starts are checked every 30 minutes. For 30-minute windows, non-rain weather values use the nearest returned hourly model point; it is not launch permission or a safety decision, and you still need your normal range, NOTAM, airspace, landowner, recovery, and club procedures.</p>
+      ${usableRunHtml}
+      <p class="muted small">This is a weather-ranking helper for MachX only: lower score is better. It now finds the best continuous usable stretch and stops the sequence at the first ${LAUNCH_UNUSABLE_SCORE}+ bad/unusable candidate. Candidate starts are checked every 30 minutes. For 30-minute windows, non-rain weather values use the nearest returned hourly model point; it is not launch permission or a safety decision, and you still need your normal range, NOTAM, airspace, landowner, recovery, and club procedures.</p>
+      ${launchScoreExplanationHtml()}
+      <h3 style="margin-top:14px">${escapeHtml(tableCaption)}</h3>
       <div class="tableWrap"><table>
         <thead><tr><th>Window</th><th>Score</th><th>10 m wind avg/max</th><th>Gust max</th><th>Aloft max</th><th>Shear</th><th>Rain / chance</th><th>Cloud</th><th>Visibility</th></tr></thead>
-        <tbody>${topRows}</tbody>
+        <tbody>${runRows}</tbody>
       </table></div>`;
     bindLaunchDurationSelect();
   }
@@ -1889,6 +2205,7 @@
       loadLocation(savedLoc);
     });
   });
+  el.themeBtn.addEventListener("click", () => setSunMode(!document.body.classList.contains("sunMode")));
   el.windUnitSelect.addEventListener("change", renderAll);
   el.aloftStepSelect.addEventListener("change", renderAloft);
   el.daysSelect.addEventListener("change", () => {
