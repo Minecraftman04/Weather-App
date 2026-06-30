@@ -506,6 +506,21 @@
     #launchWindowCard {
       grid-column: 1 / -1;
     }
+    .launchHeader {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .launchHeader h2 { margin-bottom: 4px; }
+    .launchDurationControl {
+      min-width: min(230px, 100%);
+    }
+    .launchDurationControl label {
+      margin-bottom: 5px;
+    }
     .launchBest {
       display: grid;
       grid-template-columns: minmax(240px, 1fr) minmax(190px, auto);
@@ -683,7 +698,7 @@
 
         <article class="card" id="launchWindowCard" hidden>
           <h2>MachX launch window</h2>
-          <p class="muted">Select Campbeltown Airport to calculate the best 2-hour launch period from 10:00 to 17:00.</p>
+          <p class="muted">Select Campbeltown Airport to calculate the best launch period from 10:00 to 17:00.</p>
         </article>
 
         <article class="card" id="minuteRainCard">
@@ -750,7 +765,8 @@
     warning: "",
     liveMode: false,
     liveTimer: null,
-    lastLiveUpdate: null
+    lastLiveUpdate: null,
+    launchWindowDurationHours: Number(localStorage.getItem("weatherAloftLaunchDurationHours") || 2)
   };
 
   const WEATHER_CODES = {
@@ -1220,12 +1236,49 @@
     return finite(ms) ? ms * 2.23693629 : null;
   }
 
-  function windowTimeLabel(date, startHour, durationHours = 2) {
-    const startIso = `${date}T${String(startHour).padStart(2, "0")}:00`;
-    const endHour = startHour + durationHours;
-    const endIso = `${date}T${String(endHour).padStart(2, "0")}:00`;
+  function launchDurationLabel(hours = state.launchWindowDurationHours) {
+    return Number(hours) === 0.5 ? "30 mins" : `${Number(hours)}h`;
+  }
+
+  function launchDurationSelectHtml() {
+    const selected = String(state.launchWindowDurationHours);
+    const options = [
+      ["0.5", "30 mins"],
+      ["1", "1h"],
+      ["2", "2h"],
+      ["3", "3h"],
+      ["4", "4h"]
+    ];
+    return `
+      <div class="launchDurationControl field">
+        <label for="launchDurationSelect">Window length</label>
+        <select id="launchDurationSelect">
+          ${options.map(([value, label]) => `<option value="${value}"${value === selected ? " selected" : ""}>${label}</option>`).join("")}
+        </select>
+      </div>`;
+  }
+
+  function bindLaunchDurationSelect() {
+    document.getElementById("launchDurationSelect")?.addEventListener("change", e => {
+      state.launchWindowDurationHours = Number(e.target.value);
+      localStorage.setItem("weatherAloftLaunchDurationHours", String(state.launchWindowDurationHours));
+      renderLaunchWindow();
+    });
+  }
+
+  function minuteOfDayToIso(date, minuteOfDay) {
+    const hh = Math.floor(minuteOfDay / 60);
+    const mm = minuteOfDay % 60;
+    return `${date}T${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+  }
+
+  function windowTimeLabel(date, startMinuteOfDay, durationHours = state.launchWindowDurationHours) {
+    const durationMinutes = Math.round(Number(durationHours) * 60);
+    const startIso = minuteOfDayToIso(date, startMinuteOfDay);
+    const endIso = minuteOfDayToIso(date, startMinuteOfDay + durationMinutes);
     return `${formatLocal(startIso)}–${formatLocal(endIso, false)}`;
   }
+
 
   function worstWeatherPenalty(codes) {
     let penalty = 0;
@@ -1263,26 +1316,53 @@
     return "Poor";
   }
 
+  function hourlyIndexesForWindow(h, date, startStamp, endStamp) {
+    const stamped = h.time
+      .map((time, index) => ({ time, index, stamp: localStamp(time), parts: parseLocalParts(time) }))
+      .filter(x => x.parts.date === date);
+    const indexes = stamped
+      .filter(x => x.stamp >= startStamp && x.stamp < endStamp)
+      .map(x => x.index);
+    if (indexes.length) return indexes;
+
+    // For 30-minute windows, the hourly model often has no exact timestamp inside half the
+    // candidate windows. Use the nearest hourly model point to the midpoint instead of
+    // interpolating or hiding those windows.
+    const midpoint = startStamp + (endStamp - startStamp) / 2;
+    const nearest = stamped
+      .map(x => ({ ...x, diff: Math.abs(x.stamp - midpoint) }))
+      .sort((a, b) => a.diff - b.diff)[0];
+    return nearest && nearest.diff <= 60 * 60 * 1000 ? [nearest.index] : [];
+  }
+
   function machXLaunchCandidates() {
     const h = state.surface?.hourly;
     if (!h?.time?.length) return [];
+    const durationHours = Number(state.launchWindowDurationHours || 2);
+    const durationMinutes = Math.round(durationHours * 60);
     const nowStamp = state.surface?.current?.time ? localStamp(state.surface.current.time) : Date.now();
     const dates = [...new Set(h.time.map(t => parseLocalParts(t).date))];
     const candidates = [];
 
     for (const date of dates) {
-      for (let startHour = 10; startHour <= 15; startHour += 1) {
-        const endHour = startHour + 2;
-        const windowEndStamp = localStamp(`${date}T${String(endHour).padStart(2, "0")}:00`);
-        if (windowEndStamp <= nowStamp - 10 * 60 * 1000) continue;
+      const firstStartMinute = 10 * 60;
+      const lastStartMinute = 17 * 60 - durationMinutes;
+      if (lastStartMinute < firstStartMinute) continue;
 
-        const indexes = h.time
-          .map((time, index) => ({ time, index, parts: parseLocalParts(time) }))
-          .filter(x => x.parts.date === date && x.parts.hh >= startHour && x.parts.hh < endHour)
-          .map(x => x.index);
-        if (indexes.length < 2) continue;
+      for (let startMinute = firstStartMinute; startMinute <= lastStartMinute; startMinute += 30) {
+        const endMinute = startMinute + durationMinutes;
+        const startStamp = localStamp(minuteOfDayToIso(date, startMinute));
+        const endStamp = localStamp(minuteOfDayToIso(date, endMinute));
+        if (endStamp <= nowStamp - 10 * 60 * 1000) continue;
 
-        const rainMm = indexes.reduce((sum, i) => sum + Number(h.precipitation?.[i] || 0), 0);
+        const indexes = hourlyIndexesForWindow(h, date, startStamp, endStamp);
+        if (!indexes.length) continue;
+
+        // Hourly precipitation is an hourly amount. For the 30-minute option, scale a single
+        // nearest-hour rain sample down to the selected duration rather than pretending it is
+        // a full window total. Wind/gust/cloud values remain direct model samples.
+        const rainScale = Math.min(1, durationHours / Math.max(indexes.length, 1));
+        const rainMm = indexes.reduce((sum, i) => sum + Number(h.precipitation?.[i] || 0), 0) * rainScale;
         const popMax = maxNumber(indexes.map(i => h.precipitation_probability?.[i]));
         const surfaceWindMax = maxNumber(indexes.map(i => h.wind_speed_10m?.[i]));
         const surfaceWindAvg = avgNumber(indexes.map(i => h.wind_speed_10m?.[i]));
@@ -1318,9 +1398,10 @@
 
         candidates.push({
           date,
-          startHour,
-          endHour,
-          label: windowTimeLabel(date, startHour, 2),
+          startMinute,
+          endMinute,
+          durationHours,
+          label: windowTimeLabel(date, startMinute, durationHours),
           score,
           rating: launchWindowRating(score),
           rainMm,
@@ -1339,6 +1420,7 @@
     return candidates.sort((a, b) => a.score - b.score);
   }
 
+
   function renderLaunchWindow() {
     const card = el.launchWindowCard;
     if (!card) return;
@@ -1347,11 +1429,19 @@
       return;
     }
     card.hidden = false;
+    const durationLabel = launchDurationLabel();
     const candidates = machXLaunchCandidates();
     if (!candidates.length) {
       card.innerHTML = `
-        <h2>MachX launch window</h2>
-        <p class="muted">No complete 2-hour launch windows were found between 10:00 and 17:00 in the currently loaded forecast. Increase the forecast length or try again later.</p>`;
+        <div class="launchHeader">
+          <div>
+            <h2>MachX launch window</h2>
+            <p class="muted small" style="margin:0">Choose the period length, then the page ranks windows from 10:00 to 17:00 at Campbeltown Airport.</p>
+          </div>
+          ${launchDurationSelectHtml()}
+        </div>
+        <p class="muted">No complete ${escapeHtml(durationLabel)} launch windows were found between 10:00 and 17:00 in the currently loaded forecast. Increase the forecast length or try again later.</p>`;
+      bindLaunchDurationSelect();
       return;
     }
 
@@ -1370,12 +1460,18 @@
       </tr>`).join("");
 
     card.innerHTML = `
-      <h2>MachX launch window</h2>
+      <div class="launchHeader">
+        <div>
+          <h2>MachX launch window</h2>
+          <p class="muted small" style="margin:0">Best ${escapeHtml(durationLabel)} period between 10:00 and 17:00 at Campbeltown Airport</p>
+        </div>
+        ${launchDurationSelectHtml()}
+      </div>
       <div class="launchBest">
         <div>
-          <p class="muted small" style="margin:0">Best 2-hour period between 10:00 and 17:00 at Campbeltown Airport</p>
           <div class="launchBestTime">${escapeHtml(best.label)}</div>
           <div class="chips">
+            <span class="chip">Length ${escapeHtml(durationLabel)}</span>
             <span class="chip">10 m wind avg/max ${round(msToMphNumber(best.surfaceWindAvg), 0)}/${round(msToMphNumber(best.surfaceWindMax), 0)} mph</span>
             <span class="chip">Gust max ${round(msToMphNumber(best.gustMax), 0)} mph</span>
             <span class="chip">Aloft max ${round(msToMphNumber(best.aloftMax), 0)} mph</span>
@@ -1389,12 +1485,14 @@
           <strong>${escapeHtml(best.rating)}</strong>
         </div>
       </div>
-      <p class="muted small">This is a weather-ranking helper for MachX only: lower score is better. It favours dry windows, lower surface wind/gusts, lower winds aloft, lower vertical wind shear, better visibility, and less cloud. It is not a launch permission/safety decision, and you still need your normal range, NOTAM, airspace, landowner, recovery, and club procedures.</p>
+      <p class="muted small">This is a weather-ranking helper for MachX only: lower score is better. It favours dry windows, lower surface wind/gusts, lower winds aloft, lower vertical wind shear, better visibility, and less cloud. Candidate starts are checked every 30 minutes. For 30-minute windows, non-rain weather values use the nearest returned hourly model point; it is not launch permission or a safety decision, and you still need your normal range, NOTAM, airspace, landowner, recovery, and club procedures.</p>
       <div class="tableWrap"><table>
         <thead><tr><th>Window</th><th>Score</th><th>10 m wind avg/max</th><th>Gust max</th><th>Aloft max</th><th>Shear</th><th>Rain / chance</th><th>Cloud</th><th>Visibility</th></tr></thead>
         <tbody>${topRows}</tbody>
       </table></div>`;
+    bindLaunchDurationSelect();
   }
+
 
   function renderHourly() {
     const h = state.surface?.hourly;
