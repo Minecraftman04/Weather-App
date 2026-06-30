@@ -368,10 +368,11 @@
     .sideRail {
       display: grid;
       gap: 18px;
-      position: sticky;
-      top: 14px;
+      position: static;
+      top: auto;
     }
     .fullWidth { min-width: 0; }
+    .sideRail .card { position: relative; z-index: 0; }
     .stack { display: grid; gap: 18px; }
 
     .card {
@@ -634,7 +635,9 @@
     #minuteRainCard .rainDropdown[open] .rainDropdownBody {
       max-height: min(72vh, 760px);
       overflow: auto;
+      overscroll-behavior: contain;
     }
+    #minuteRainCard .tableWrap { max-width: 100%; }
 
 
 
@@ -650,11 +653,49 @@
       margin-bottom: 12px;
     }
     .launchHeader h2 { margin-bottom: 4px; }
-    .launchDurationControl {
+    .launchControls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      align-items: end;
+    }
+    .launchDurationControl,
+    .launchDayControl {
       min-width: min(230px, 100%);
     }
-    .launchDurationControl label {
+    .launchDayControl { min-width: min(270px, 100%); }
+    .launchDurationControl label,
+    .launchDayControl label {
       margin-bottom: 5px;
+    }
+    .launchMiniGrid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(140px, 1fr));
+      gap: 10px;
+      margin: 12px 0;
+    }
+    .launchMiniStat {
+      border: 1px solid rgba(173, 220, 230, 0.14);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.035);
+      padding: 12px;
+      min-height: 82px;
+    }
+    .launchMiniStat span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 760;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+    .launchMiniStat strong {
+      display: block;
+      color: var(--text);
+      font-size: 1.15rem;
+      line-height: 1.15;
     }
     .launchBest {
       display: grid;
@@ -720,9 +761,15 @@
       line-height: 1.55;
       padding: 0;
     }
+    @media (max-width: 900px) {
+      .launchMiniGrid { grid-template-columns: repeat(2, minmax(140px, 1fr)); }
+      .launchControls { justify-content: stretch; }
+      .launchControls .field { flex: 1 1 220px; }
+    }
     @media (max-width: 720px) {
       .launchBest { grid-template-columns: 1fr; }
       .launchScoreBox { place-items: start; text-align: left; }
+      .launchMiniGrid { grid-template-columns: 1fr; }
     }
 
     footer {
@@ -735,7 +782,7 @@
 
     @media (max-width: 1120px) {
       .hero, .overviewGrid, .mainDataGrid { grid-template-columns: 1fr; }
-      .sideRail { position: static; grid-template-columns: 1fr 1fr; }
+      .sideRail { position: static; top: auto; grid-template-columns: 1fr 1fr; }
       .controls { grid-template-columns: repeat(3, minmax(120px, 1fr)); }
     }
     @media (max-width: 760px) {
@@ -861,7 +908,7 @@
 
         <article class="card" id="launchWindowCard" hidden>
           <h2>MachX launch window</h2>
-          <p class="muted">Select Campbeltown Airport to calculate the best launch period and continuous usable stretch from 09:30 to 22:00.</p>
+          <p class="muted">Select Campbeltown Airport to calculate the best launch period by day, window length, and continuous usable stretch from 09:30 to 22:00.</p>
         </article>
 
         <article class="card" id="minuteRainCard">
@@ -930,7 +977,8 @@
     liveMode: false,
     liveTimer: null,
     lastLiveUpdate: null,
-    launchWindowDurationHours: Number(localStorage.getItem("weatherAloftLaunchDurationHours") || 2)
+    launchWindowDate: localStorage.getItem("weatherAloftLaunchDate") || "auto",
+    launchWindowDurationHours: [0.5, 1, 2, 3, 4].includes(Number(localStorage.getItem("weatherAloftLaunchDurationHours"))) ? Number(localStorage.getItem("weatherAloftLaunchDurationHours")) : 2
   };
 
   const WEATHER_CODES = {
@@ -1091,7 +1139,10 @@
   }
 
   function locationLabel(loc) {
-    return [loc.name, loc.admin2, loc.admin1, loc.country].filter(Boolean).join(", ");
+    const label = [loc.name, loc.admin2, loc.admin1, loc.country].filter(Boolean).join(", ");
+    if (label) return label;
+    if (finite(loc.latitude) && finite(loc.longitude)) return `${Number(loc.latitude).toFixed(4)}, ${Number(loc.longitude).toFixed(4)}`;
+    return "Selected location";
   }
 
   async function searchLocation(query) {
@@ -1219,6 +1270,7 @@
       el.locationInput.value = label;
       localStorage.setItem("weatherAloftLastLocation", JSON.stringify(loc));
       const params = new URLSearchParams({ lat: loc.latitude, lon: loc.longitude, name: label });
+      if (loc.launchSite) params.set("launchSite", loc.launchSite);
       history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
       renderAll();
       showNotice(state.warning || `Loaded ${label}. Times shown are local to the forecast location.` , state.warning ? "warn" : "");
@@ -1432,10 +1484,61 @@
       </div>`;
   }
 
-  function bindLaunchDurationSelect() {
+  function launchForecastDates() {
+    const h = state.surface?.hourly;
+    if (!h?.time?.length) return [];
+    return [...new Set(h.time.map(t => parseLocalParts(t).date))].sort();
+  }
+
+  function launchDayLabel(date) {
+    if (!date) return "Best loaded day";
+    const midday = new Date(`${date}T12:00:00`);
+    const label = new Intl.DateTimeFormat(undefined, { weekday: "short", day: "numeric", month: "short" }).format(midday);
+    const today = state.surface?.current?.time ? parseLocalParts(state.surface.current.time).date : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(new Date().getDate()).padStart(2, "0")}`;
+    const tomorrow = new Date(`${today}T12:00:00`);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowDate = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, "0")}-${String(tomorrow.getDate()).padStart(2, "0")}`;
+    if (date === today) return `Today · ${label}`;
+    if (date === tomorrowDate) return `Tomorrow · ${label}`;
+    return label;
+  }
+
+  function selectedLaunchDate() {
+    const dates = launchForecastDates();
+    if (state.launchWindowDate === "auto") return null;
+    if (dates.includes(state.launchWindowDate)) return state.launchWindowDate;
+    state.launchWindowDate = "auto";
+    localStorage.setItem("weatherAloftLaunchDate", "auto");
+    return null;
+  }
+
+  function launchDaySelectHtml() {
+    const dates = launchForecastDates();
+    const selected = selectedLaunchDate() || "auto";
+    const options = [
+      `<option value="auto"${selected === "auto" ? " selected" : ""}>Best loaded day</option>`,
+      ...dates.map(date => `<option value="${escapeHtml(date)}"${date === selected ? " selected" : ""}>${escapeHtml(launchDayLabel(date))}</option>`)
+    ].join("");
+    return `
+      <div class="launchDayControl field">
+        <label for="launchDateSelect">Launch day</label>
+        <select id="launchDateSelect">${options}</select>
+      </div>`;
+  }
+
+  function launchControlsHtml() {
+    return `<div class="launchControls">${launchDaySelectHtml()}${launchDurationSelectHtml()}</div>`;
+  }
+
+  function bindLaunchWindowControls() {
     document.getElementById("launchDurationSelect")?.addEventListener("change", e => {
       state.launchWindowDurationHours = Number(e.target.value);
       localStorage.setItem("weatherAloftLaunchDurationHours", String(state.launchWindowDurationHours));
+      renderLaunchWindow();
+    });
+    document.getElementById("launchDateSelect")?.addEventListener("change", e => {
+      state.launchWindowDate = e.target.value || "auto";
+      localStorage.setItem("weatherAloftLaunchDate", state.launchWindowDate);
       renderLaunchWindow();
     });
   }
@@ -1515,13 +1618,13 @@
     return nearest && nearest.diff <= 60 * 60 * 1000 ? [nearest.index] : [];
   }
 
-  function machXLaunchCandidates() {
+  function machXLaunchCandidates(dateFilter = selectedLaunchDate()) {
     const h = state.surface?.hourly;
     if (!h?.time?.length) return [];
     const durationHours = Number(state.launchWindowDurationHours || 2);
     const durationMinutes = Math.round(durationHours * 60);
     const nowStamp = state.surface?.current?.time ? localStamp(state.surface.current.time) : Date.now();
-    const dates = [...new Set(h.time.map(t => parseLocalParts(t).date))];
+    const dates = launchForecastDates().filter(date => !dateFilter || date === dateFilter);
     const candidates = [];
 
     for (const date of dates) {
@@ -1707,6 +1810,47 @@
   }
 
 
+  function bestRunForDate(candidates, date) {
+    return launchUsableRuns(candidates.filter(c => c.date === date))[0] || null;
+  }
+
+  function launchDayOverviewHtml(candidates, best) {
+    const dates = [...new Set(candidates.map(c => c.date))].sort();
+    if (!dates.length) return "";
+    const rows = dates.map(date => {
+      const dayCandidates = candidates.filter(c => c.date === date).sort((a, b) => a.score - b.score);
+      const dayBest = dayCandidates[0];
+      const dayRun = bestRunForDate(candidates, date);
+      const usableCount = dayCandidates.filter(isLaunchWindowUsable).length;
+      return `<tr class="${dayBest === best ? "bestLaunchRow" : ""}">
+        <td><strong>${escapeHtml(launchDayLabel(date))}</strong></td>
+        <td>${dayBest ? `${escapeHtml(dayBest.label)} · ${round(dayBest.score, 0)} ${escapeHtml(dayBest.rating)}` : "—"}</td>
+        <td>${usableCount}/${dayCandidates.length}</td>
+        <td>${dayRun ? `${escapeHtml(dayRun.label)} · ${escapeHtml(formatDurationMinutes(dayRun.durationMinutes))}` : "—"}</td>
+      </tr>`;
+    }).join("");
+    return `
+      <h3 style="margin-top:14px">Loaded-day overview</h3>
+      <div class="tableWrap"><table>
+        <thead><tr><th>Day</th><th>Best window</th><th>Usable starts</th><th>Longest usable stretch</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>`;
+  }
+
+  function launchMiniStatsHtml(candidates, bestRun) {
+    const usableCount = candidates.filter(isLaunchWindowUsable).length;
+    const badCount = candidates.length - usableCount;
+    const longestStretch = bestRun ? formatDurationMinutes(bestRun.durationMinutes) : "None";
+    const selected = selectedLaunchDate();
+    return `
+      <div class="launchMiniGrid">
+        <div class="launchMiniStat"><span>Launch day</span><strong>${escapeHtml(selected ? launchDayLabel(selected) : "Best loaded day")}</strong></div>
+        <div class="launchMiniStat"><span>Usable starts</span><strong>${usableCount} / ${candidates.length}</strong></div>
+        <div class="launchMiniStat"><span>Longest usable stretch</span><strong>${escapeHtml(longestStretch)}</strong></div>
+        <div class="launchMiniStat"><span>Bad/marginal starts</span><strong>${badCount}</strong></div>
+      </div>`;
+  }
+
   function renderLaunchWindow() {
     const card = el.launchWindowCard;
     if (!card) return;
@@ -1716,19 +1860,21 @@
     }
     card.hidden = false;
     const durationLabel = launchDurationLabel();
-    const candidates = machXLaunchCandidates();
+    const selectedDate = selectedLaunchDate();
+    const selectedDateLabel = selectedDate ? launchDayLabel(selectedDate) : "best loaded day";
+    const candidates = machXLaunchCandidates(selectedDate);
     if (!candidates.length) {
       card.innerHTML = `
         <div class="launchHeader">
           <div>
             <h2>MachX launch window</h2>
-            <p class="muted small" style="margin:0">Choose the period length, then the page ranks windows from 09:30 to 22:00 at Campbeltown Airport.</p>
+            <p class="muted small" style="margin:0">Choose a launch day and window length. The page ranks candidate starts from 09:30 to 22:00 at Campbeltown Airport.</p>
           </div>
-          ${launchDurationSelectHtml()}
+          ${launchControlsHtml()}
         </div>
-        <p class="muted">No complete ${escapeHtml(durationLabel)} launch windows were found between 09:30 and 22:00 in the currently loaded forecast. Increase the forecast length or try again later.</p>
+        <p class="muted">No complete ${escapeHtml(durationLabel)} launch windows were found for ${escapeHtml(selectedDateLabel)} between 09:30 and 22:00 in the currently loaded forecast. Increase the forecast length, choose another day, or try again later.</p>
         ${launchScoreExplanationHtml()}`;
-      bindLaunchDurationSelect();
+      bindLaunchWindowControls();
       return;
     }
 
@@ -1736,15 +1882,16 @@
     const usableRuns = launchUsableRuns(candidates);
     const bestRun = usableRuns[0] || null;
     const chronological = launchCandidatesChronological(candidates);
-    const fallbackRows = chronological.slice(0, 18).map(c => launchCandidateRow(c, best)).join("");
+    const fallbackRows = chronological.slice(0, 24).map(c => launchCandidateRow(c, best)).join("");
+    const dayOverview = selectedDate ? "" : launchDayOverviewHtml(candidates, best);
 
     let usableRunHtml = `
       <div class="launchRunBox">
-        <strong>No usable continuous stretch found.</strong>
+        <strong>No usable continuous stretch found for the selected settings.</strong>
         <p class="muted small" style="margin:6px 0 0">Every candidate window in the loaded 09:30–22:00 forecast is already ${LAUNCH_UNUSABLE_SCORE}+ / marginal or worse. The best individual option is still shown above for comparison.</p>
       </div>`;
     let runRows = fallbackRows;
-    let tableCaption = "Chronological launch windows";
+    let tableCaption = selectedDate ? "Chronological launch windows for selected day" : "Chronological launch windows for best loaded day view";
 
     if (bestRun) {
       const stopperText = bestRun.stopper
@@ -1754,7 +1901,7 @@
       const runEnd = bestRun.items[bestRun.items.length - 1];
       usableRunHtml = `
         <div class="launchRunBox">
-          <strong>Continuous usable stretch until bad/unusable:</strong>
+          <strong>Best continuous usable stretch until bad/unusable:</strong>
           <div class="launchBestTime" style="font-size:clamp(1.15rem,2.4vw,1.9rem)">${escapeHtml(bestRun.label)}</div>
           <div class="chips">
             <span class="chip">Total stretch ${escapeHtml(formatDurationMinutes(bestRun.durationMinutes))}</span>
@@ -1776,14 +1923,16 @@
       <div class="launchHeader">
         <div>
           <h2>MachX launch window</h2>
-          <p class="muted small" style="margin:0">Best ${escapeHtml(durationLabel)} period between 09:30 and 22:00 at Campbeltown Airport</p>
+          <p class="muted small" style="margin:0">${escapeHtml(durationLabel)} launch-window ranking for ${escapeHtml(selectedDateLabel)} · Campbeltown Airport · 09:30–22:00</p>
         </div>
-        ${launchDurationSelectHtml()}
+        ${launchControlsHtml()}
       </div>
       <div class="launchBest">
         <div>
+          <span class="chip">Best individual window</span>
           <div class="launchBestTime">${escapeHtml(best.label)}</div>
           <div class="chips">
+            <span class="chip">Launch day ${escapeHtml(launchDayLabel(best.date))}</span>
             <span class="chip">Length ${escapeHtml(durationLabel)}</span>
             <span class="chip">10 m wind avg/max ${round(msToMphNumber(best.surfaceWindAvg), 0)}/${round(msToMphNumber(best.surfaceWindMax), 0)} mph</span>
             <span class="chip">Gust max ${round(msToMphNumber(best.gustMax), 0)} mph</span>
@@ -1798,15 +1947,17 @@
           <strong>${escapeHtml(best.rating)}</strong>
         </div>
       </div>
+      ${launchMiniStatsHtml(candidates, bestRun)}
       ${usableRunHtml}
-      <p class="muted small">This is a weather-ranking helper for MachX only: lower score is better. It now finds the best continuous usable stretch and stops the sequence at the first ${LAUNCH_UNUSABLE_SCORE}+ bad/unusable candidate. Candidate starts are checked every 30 minutes. For 30-minute windows, non-rain weather values use the nearest returned hourly model point; it is not launch permission or a safety decision, and you still need your normal range, NOTAM, airspace, landowner, recovery, and club procedures.</p>
+      <p class="muted small">This is a weather-ranking helper for MachX only: lower score is better. Pick a launch day and window length above. The page checks candidate starts every 30 minutes between 09:30 and 22:00, finds the best individual window, then finds the best continuous usable stretch and stops that sequence at the first ${LAUNCH_UNUSABLE_SCORE}+ bad/unusable candidate. For 30-minute windows, non-rain weather values use the nearest returned hourly model point; it is not launch permission or a safety decision, and you still need your normal range, NOTAM, airspace, landowner, recovery, and club procedures.</p>
       ${launchScoreExplanationHtml()}
+      ${dayOverview}
       <h3 style="margin-top:14px">${escapeHtml(tableCaption)}</h3>
       <div class="tableWrap"><table>
         <thead><tr><th>Window</th><th>Score</th><th>10 m wind avg/max</th><th>Gust max</th><th>Aloft max</th><th>Shear</th><th>Rain / chance</th><th>Cloud</th><th>Visibility</th></tr></thead>
         <tbody>${runRows}</tbody>
       </table></div>`;
-    bindLaunchDurationSelect();
+    bindLaunchWindowControls();
   }
 
 
@@ -2285,7 +2436,7 @@
     const lat = Number(params.get("lat"));
     const lon = Number(params.get("lon"));
     if (Number.isFinite(lat) && Number.isFinite(lon)) {
-      const loc = { latitude: lat, longitude: lon, name: params.get("name") || `${lat}, ${lon}`, country: "", admin1: "", elevation: null };
+      const loc = { latitude: lat, longitude: lon, name: params.get("name") || `${lat}, ${lon}`, country: "", admin1: "", admin2: "", elevation: null, launchSite: params.get("launchSite") || "" };
       el.locationInput.value = loc.name;
       loadLocation(loc);
       return;
