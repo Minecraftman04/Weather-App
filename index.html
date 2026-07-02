@@ -1,0 +1,1211 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Static GitHub Pages weather dashboard with rain nowcast, winds aloft, OpenRocket export, and MachX launch-window helper." />
+  <title>Weather + Winds Aloft</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #06131a;
+      --panel: rgba(10, 25, 34, 0.84);
+      --panel-strong: rgba(14, 38, 50, 0.94);
+      --panel-soft: rgba(255, 255, 255, 0.055);
+      --border: rgba(173, 220, 230, 0.18);
+      --border-strong: rgba(125, 211, 252, 0.40);
+      --text: #f5fbff;
+      --muted: #a8bfca;
+      --muted-2: #7f9aa8;
+      --accent: #22d3ee;
+      --accent-2: #34d399;
+      --accent-3: #60a5fa;
+      --warn: #fbbf24;
+      --bad: #fb7185;
+      --shadow: 0 22px 70px rgba(0, 0, 0, 0.30);
+      --radius: 24px;
+      --radius-sm: 15px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 5% 0%, rgba(34, 211, 238, 0.18), transparent 28rem),
+        radial-gradient(circle at 95% 8%, rgba(52, 211, 153, 0.14), transparent 32rem),
+        linear-gradient(180deg, #06131a 0%, #081923 43%, #0b1119 100%);
+      color: var(--text);
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.12;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px);
+      background-size: 46px 46px;
+      mask-image: linear-gradient(to bottom, black, transparent 80%);
+    }
+
+    body.sunMode {
+      color-scheme: light;
+      --panel: rgba(255, 255, 255, 0.96);
+      --panel-strong: rgba(255, 255, 255, 0.99);
+      --panel-soft: rgba(13, 52, 82, 0.055);
+      --border: rgba(20, 72, 105, 0.22);
+      --border-strong: rgba(10, 104, 160, 0.46);
+      --text: #0b1722;
+      --muted: #405b6c;
+      --muted-2: #5f7481;
+      --accent: #006bb6;
+      --accent-2: #008a7a;
+      --accent-3: #2454e8;
+      --warn: #9a6100;
+      --bad: #b4233c;
+      --shadow: 0 18px 58px rgba(7, 32, 52, 0.16);
+      background:
+        radial-gradient(circle at 7% 0%, rgba(0, 107, 182, 0.13), transparent 31rem),
+        radial-gradient(circle at 95% 4%, rgba(0, 138, 122, 0.10), transparent 30rem),
+        linear-gradient(180deg, #ffffff 0%, #f1f8ff 48%, #e7f0f8 100%);
+    }
+    body.sunMode::before {
+      opacity: 0.18;
+      background-image:
+        linear-gradient(rgba(10, 75, 120, 0.13) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(10, 75, 120, 0.13) 1px, transparent 1px);
+    }
+    body.sunMode .heroCopy,
+    body.sunMode .searchPanel,
+    body.sunMode .card,
+    body.sunMode .notice {
+      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(243,249,255,0.96));
+      backdrop-filter: none;
+    }
+    body.sunMode .heroStat,
+    body.sunMode .savedLocations,
+    body.sunMode .dayCard,
+    body.sunMode .launchRunBox,
+    body.sunMode .launchScoreExplanation,
+    body.sunMode .launchMiniStat,
+    body.sunMode .aloftGraphPanel {
+      background: rgba(9, 56, 90, 0.055);
+      border-color: rgba(20, 72, 105, 0.16);
+      color: var(--text);
+    }
+    body.sunMode input,
+    body.sunMode select {
+      background: #ffffff;
+      color: var(--text);
+      border-color: rgba(20, 72, 105, 0.28);
+      box-shadow: 0 1px 0 rgba(255,255,255,0.8);
+    }
+    body.sunMode button {
+      color: #ffffff;
+      background: linear-gradient(135deg, #006bb6, #008a7a);
+      box-shadow: 0 10px 22px rgba(0, 107, 182, 0.18);
+    }
+    body.sunMode button.secondary,
+    body.sunMode .savedLocationBtn,
+    body.sunMode .resultBtn {
+      background: #ffffff;
+      color: #0b1722;
+      border-color: rgba(20, 72, 105, 0.28);
+      box-shadow: none;
+    }
+    body.sunMode .themeToggleActive {
+      background: linear-gradient(135deg, #ffcf32, #ff8a00);
+      color: #201200;
+      border-color: rgba(143, 84, 0, 0.30);
+    }
+    body.sunMode .tableWrap,
+    body.sunMode .graphScroll { background: #ffffff; border-color: rgba(20, 72, 105, 0.22); }
+    body.sunMode th { background: #e7f2fb; color: #16445e; border-bottom-color: rgba(20, 72, 105, 0.18); }
+    body.sunMode td { border-bottom-color: rgba(20, 72, 105, 0.11); }
+    body.sunMode tr:hover td { background: rgba(0, 107, 182, 0.055); }
+    body.sunMode .chip,
+    body.sunMode .windArrow,
+    body.sunMode .rainIntensity {
+      background: rgba(0, 107, 182, 0.08);
+      border-color: rgba(0, 107, 182, 0.22);
+      color: #0b1722;
+    }
+    body.sunMode .bar { background: linear-gradient(90deg, #006bb6, #008a7a); }
+    body.sunMode .rainRow td { background: rgba(0, 107, 182, 0.075); }
+    body.sunMode .bestLaunchRow td { background: rgba(0, 138, 122, 0.09); color: #073624; }
+    body.sunMode .badLaunchRow td { background: rgba(180, 35, 60, 0.09); color: #5f1020; }
+
+    a { color: var(--accent); }
+    button, input, select { font: inherit; }
+
+    .wrap {
+      width: min(1420px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 24px 0 42px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(320px, 0.95fr) minmax(460px, 1.35fr);
+      gap: 18px;
+      align-items: stretch;
+      margin-bottom: 18px;
+    }
+    .heroCopy {
+      padding: clamp(22px, 4vw, 34px);
+      border: 1px solid var(--border);
+      border-radius: calc(var(--radius) + 6px);
+      background:
+        linear-gradient(135deg, rgba(10, 25, 34, 0.94), rgba(12, 45, 58, 0.72)),
+        radial-gradient(circle at 14% 15%, rgba(34, 211, 238, 0.22), transparent 15rem);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .kicker {
+      display: inline-flex;
+      margin-bottom: 14px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(34, 211, 238, 0.28);
+      background: rgba(34, 211, 238, 0.08);
+      color: var(--accent);
+      font-size: 0.82rem;
+      font-weight: 850;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    h1 {
+      font-size: clamp(2.25rem, 5vw, 5rem);
+      line-height: 0.92;
+      letter-spacing: -0.075em;
+      margin: 0 0 14px;
+      max-width: 10ch;
+    }
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      max-width: 68ch;
+      font-size: 1rem;
+      line-height: 1.58;
+    }
+    .heroStats { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+    .heroStat {
+      padding: 8px 11px;
+      border: 1px solid rgba(173, 220, 230, 0.16);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.055);
+      color: var(--text);
+      font-size: 0.88rem;
+      font-weight: 720;
+    }
+
+    .searchPanel, .card, .notice {
+      background: linear-gradient(180deg, rgba(14, 38, 50, 0.88), rgba(8, 22, 31, 0.80));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+    }
+    .searchPanel { padding: 16px; display: grid; align-content: start; gap: 12px; }
+    .searchGrid { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+    input, select {
+      width: 100%;
+      min-height: 45px;
+      background: rgba(3, 12, 18, 0.58);
+      color: var(--text);
+      border: 1px solid rgba(173, 220, 230, 0.18);
+      border-radius: 14px;
+      padding: 12px 13px;
+      outline: none;
+    }
+    input:focus, select:focus { border-color: var(--border-strong); box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.12); }
+    button {
+      border: 0;
+      border-radius: 14px;
+      padding: 12px 16px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #041017;
+      cursor: pointer;
+      font-weight: 850;
+      transition: transform 120ms ease, opacity 120ms ease, border-color 120ms ease;
+      white-space: nowrap;
+      box-shadow: 0 11px 28px rgba(34, 211, 238, 0.12);
+    }
+    button:hover { transform: translateY(-1px); }
+    button:disabled { cursor: wait; opacity: 0.62; transform: none; }
+    button.secondary {
+      background: rgba(255,255,255,0.055);
+      color: var(--text);
+      border: 1px solid var(--border);
+      box-shadow: none;
+    }
+    button.tiny { padding: 7px 10px; font-size: 0.88rem; }
+
+    .controls { display: grid; grid-template-columns: repeat(6, minmax(120px, 1fr)); gap: 10px; align-items: end; }
+    .field label {
+      display: block;
+      margin: 0 0 6px 2px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.075em;
+      text-transform: uppercase;
+    }
+
+    .dashboardGrid { display: grid; gap: 18px; }
+    .overviewGrid { display: grid; grid-template-columns: minmax(310px, 0.86fr) minmax(500px, 1.4fr); gap: 18px; align-items: stretch; }
+    .mainDataGrid { display: grid; grid-template-columns: 1fr; gap: 18px; align-items: start; }
+    .card { padding: 18px; min-width: 0; }
+    .card h2, .card h3 { margin: 0 0 12px; letter-spacing: -0.035em; }
+    .card h2 { font-size: 1.18rem; display: flex; align-items: center; gap: 9px; }
+    .card h2::before {
+      content: "";
+      display: inline-block;
+      width: 9px;
+      height: 24px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, var(--accent), var(--accent-2));
+    }
+    .card h3 { font-size: 1.05rem; color: var(--accent); }
+    .muted { color: var(--muted); }
+    .small { font-size: 0.9rem; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .chip {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(173, 220, 230, 0.16);
+      border-radius: 999px;
+      padding: 7px 10px;
+      color: var(--text);
+      font-size: 0.88rem;
+      font-weight: 650;
+    }
+    .savedLocations { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px; border-radius: 16px; background: rgba(255,255,255,0.045); border: 1px solid rgba(173, 220, 230, 0.11); }
+    .savedLabel { color: var(--muted); font-size: 0.76rem; font-weight: 850; text-transform: uppercase; letter-spacing: 0.08em; margin-right: 2px; }
+    .savedLocationBtn, .resultBtn { padding: 8px 11px; font-size: 0.86rem; color: var(--text); background: rgba(34, 211, 238, 0.08); border: 1px solid rgba(34, 211, 238, 0.28); box-shadow: none; }
+    .resultBtn { display: block; width: 100%; text-align: left; }
+    .results { display: grid; gap: 8px; }
+    .notice { padding: 13px 15px; color: var(--text); margin: 0 0 18px; display: none; }
+    .notice.show { display: block; }
+    .notice.error { border-color: rgba(255, 138, 138, 0.6); color: #ffe2e2; }
+    .notice.warn { border-color: rgba(255, 209, 102, 0.6); color: #fff3cb; }
+    body.sunMode .notice.error { color: #8f1230; background: #fff4f6; }
+    body.sunMode .notice.warn { color: #6c4300; background: #fff8e6; }
+
+    .dailyGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+    .dayCard { background: rgba(255, 255, 255, 0.052); border: 1px solid rgba(173, 220, 230, 0.13); border-radius: 16px; padding: 12px; min-height: 126px; }
+    .dayTop { display:flex; justify-content: space-between; gap: 8px; align-items: center; }
+    .dayDate { color: var(--muted); font-size: 0.82rem; }
+    .dayTemp { font-size: 1.35rem; font-weight: 880; margin: 8px 0 2px; }
+
+    .tableWrap { overflow: auto; border-radius: 16px; border: 1px solid rgba(173, 220, 230, 0.16); background: rgba(0, 0, 0, 0.18); }
+    table { width: 100%; border-collapse: collapse; min-width: 760px; }
+    th, td { padding: 10px 11px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.08); white-space: nowrap; }
+    th { position: sticky; top: 0; background: rgba(7, 20, 28, 0.97); color: var(--accent); z-index: 1; font-size: 0.8rem; letter-spacing: 0.055em; text-transform: uppercase; }
+    tr:hover td { background: rgba(34, 211, 238, 0.035); }
+
+    .windArrow { display: inline-grid; width: 26px; height: 26px; place-items: center; border: 1px solid var(--border); border-radius: 50%; margin-right: 8px; background: rgba(255, 255, 255, 0.055); transform-origin: center; }
+    .bar { display: inline-block; height: 7px; min-width: 3px; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); vertical-align: middle; margin-left: 8px; }
+    .toolbar { display: grid; grid-template-columns: minmax(260px, 2fr) minmax(180px, 1fr) auto auto; gap: 10px; align-items: end; margin-bottom: 12px; }
+    .toolbar .field { min-width: 0; }
+
+    .aloftGraphPanel { margin: 14px 0; padding: 14px; border-radius: 18px; border: 1px solid rgba(173, 220, 230, 0.14); background: rgba(255,255,255,0.035); }
+    .graphTop { display: flex; align-items: start; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+    .graphTop strong { display: block; font-size: 1rem; }
+    .graphScroll { overflow: auto; border-radius: 16px; border: 1px solid rgba(173, 220, 230, 0.12); background: rgba(0,0,0,0.16); }
+    .aloftSvg { width: 100%; min-width: 720px; height: 390px; display: block; }
+    .graphAxis { stroke: var(--muted-2); stroke-width: 1.2; }
+    .graphGrid { stroke: rgba(173, 220, 230, 0.14); stroke-width: 1; }
+    .graphLine { fill: none; stroke: var(--accent-2); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+    .graphArea { fill: rgba(52, 211, 153, 0.08); }
+    .graphPoint { fill: var(--accent); stroke: var(--panel-strong); stroke-width: 2; }
+    .graphText { fill: var(--muted); font-size: 12px; font-weight: 700; }
+    .graphTitleText { fill: var(--text); font-size: 12px; font-weight: 900; }
+
+    details { margin-top: 14px; border-top: 1px solid rgba(255,255,255,0.10); padding-top: 12px; }
+    summary { cursor: pointer; color: var(--accent); font-weight: 800; }
+    #minuteRainCard { padding: 0; overflow: hidden; width: 100%; }
+    .rainDropdown { margin: 0; border-top: 0; padding-top: 0; }
+    .rainDropdown > summary { list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 18px; color: var(--text); }
+    .rainDropdown > summary::-webkit-details-marker { display: none; }
+    .rainDropdown > summary::after { content: "Show"; color: #041017; background: linear-gradient(135deg, var(--accent), var(--accent-2)); border-radius: 999px; padding: 6px 10px; font-size: 0.82rem; font-weight: 900; flex: 0 0 auto; }
+    .rainDropdown[open] > summary::after { content: "Hide"; }
+    .rainSummaryTitle { display: block; font-size: 1.18rem; font-weight: 900; letter-spacing: -0.035em; }
+    .rainSummarySub { display: block; margin-top: 3px; color: var(--muted); font-size: 0.9rem; font-weight: 500; line-height: 1.35; }
+    .rainDropdownBody { padding: 0 18px 18px; border-top: 1px solid rgba(173, 220, 230, 0.13); }
+    #minuteRainCard .rainDropdown[open] .rainDropdownBody { max-height: min(72vh, 760px); overflow: auto; overscroll-behavior: contain; }
+    .rainRow td { background: rgba(34, 211, 238, 0.08); }
+    .rainIntensity { display: inline-block; margin-left: 8px; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--border); background: rgba(34, 211, 238, 0.12); color: var(--text); font-size: 0.82rem; }
+
+    #launchWindowCard { grid-column: 1 / -1; }
+    .launchHeader { display: flex; align-items: end; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; }
+    .launchHeader h2 { margin-bottom: 4px; }
+    .launchControls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; align-items: end; }
+    .launchDurationControl { min-width: min(230px, 100%); }
+    .launchDayControl { min-width: min(270px, 100%); }
+    .launchMiniGrid { display: grid; grid-template-columns: repeat(4, minmax(140px, 1fr)); gap: 10px; margin: 12px 0; }
+    .launchMiniStat, .launchRunBox, .launchScoreExplanation { margin: 0; padding: 14px; border: 1px solid rgba(173, 220, 230, 0.14); border-radius: 18px; background: rgba(255,255,255,0.035); }
+    .launchRunBox, .launchScoreExplanation { margin: 12px 0; }
+    .launchMiniStat span { display: block; color: var(--muted); font-size: 0.78rem; font-weight: 760; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+    .launchMiniStat strong { display: block; color: var(--text); font-size: 1.15rem; line-height: 1.15; }
+    .launchBest { display: grid; grid-template-columns: minmax(240px, 1fr) minmax(190px, auto); gap: 12px; align-items: stretch; padding: 14px; border: 1px solid rgba(52, 211, 153, 0.30); border-radius: 18px; background: linear-gradient(135deg, rgba(52, 211, 153, 0.13), rgba(34, 211, 238, 0.08)), rgba(255,255,255,0.035); margin-bottom: 12px; }
+    .launchBestTime { font-size: clamp(1.35rem, 3vw, 2.35rem); line-height: 1.02; letter-spacing: -0.055em; font-weight: 930; margin: 3px 0 8px; }
+    .launchScoreBox { display: grid; place-items: center; text-align: center; min-width: 156px; padding: 12px; border-radius: 16px; border: 1px solid rgba(173, 220, 230, 0.16); background: rgba(0, 0, 0, 0.16); }
+    .launchScoreValue { font-size: 2.2rem; line-height: 1; font-weight: 920; letter-spacing: -0.06em; }
+    .bestLaunchRow td { background: rgba(52, 211, 153, 0.10); color: var(--text); }
+    .badLaunchRow td { background: rgba(248, 113, 113, 0.12); color: var(--text); border-top: 1px solid rgba(248, 113, 113, 0.28); }
+    .launchScoreExplanation summary { cursor: pointer; font-weight: 850; color: var(--text); }
+    .launchScoreExplanation ul { margin: 10px 0 0 18px; color: var(--muted); line-height: 1.55; padding: 0; }
+
+    footer { color: var(--muted-2); font-size: 0.86rem; margin-top: 24px; line-height: 1.55; padding: 0 4px; }
+
+    @media (max-width: 1120px) {
+      .hero, .overviewGrid { grid-template-columns: 1fr; }
+      .controls { grid-template-columns: repeat(3, minmax(120px, 1fr)); }
+    }
+    @media (max-width: 900px) {
+      .launchMiniGrid { grid-template-columns: repeat(2, minmax(140px, 1fr)); }
+      .launchControls { justify-content: stretch; }
+      .launchControls .field { flex: 1 1 220px; }
+    }
+    @media (max-width: 760px) {
+      .wrap { width: min(100% - 18px, 1420px); padding-top: 12px; }
+      .searchGrid, .controls, .toolbar { grid-template-columns: 1fr; }
+      .heroCopy, .searchPanel, .card { border-radius: 19px; }
+      h1 { max-width: 100%; }
+      .launchBest { grid-template-columns: 1fr; }
+      .launchScoreBox { place-items: start; text-align: left; }
+      .launchMiniGrid { grid-template-columns: 1fr; }
+      table { min-width: 720px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <section class="heroCopy" aria-label="Dashboard introduction">
+        <span class="kicker">Launch weather briefing</span>
+        <h1>Weather + Winds Aloft</h1>
+        <p class="subtitle">A GitHub Pages weather dashboard for live surface forecasts, rain timing, sea-level pressure, winds aloft to 3000 m AGL, OpenRocket wind export, and MachX launch-window checks.</p>
+        <div class="heroStats" aria-label="Dashboard features">
+          <span class="heroStat">Current + forecast</span>
+          <span class="heroStat">15-min rain</span>
+          <span class="heroStat">Winds aloft graph</span>
+          <span class="heroStat">OpenRocket CSV</span>
+        </div>
+      </section>
+
+      <section class="searchPanel" aria-label="Location search">
+        <div class="searchGrid">
+          <input id="locationInput" autocomplete="off" placeholder="Bishop's Stortford, Stansted, Snowdon, 51.87,0.16..." />
+          <button id="searchBtn" type="button">Search</button>
+        </div>
+
+        <div class="savedLocations" aria-label="Saved locations">
+          <span class="savedLabel">Saved</span>
+          <button class="savedLocationBtn" data-saved-name="Hatfield" data-saved-admin2="Hertfordshire" data-saved-admin1="England" data-saved-country="United Kingdom" data-saved-lat="51.7634" data-saved-lon="-0.2242" type="button">Hatfield</button>
+          <button class="savedLocationBtn" data-saved-name="Bishop's Stortford" data-saved-admin2="Hertfordshire" data-saved-admin1="England" data-saved-country="United Kingdom" data-saved-lat="51.8719" data-saved-lon="0.1587" type="button">Bishop's Stortford</button>
+          <button class="savedLocationBtn" data-saved-name="Machrihanish" data-saved-admin2="Argyll and Bute" data-saved-admin1="Scotland" data-saved-country="United Kingdom" data-saved-lat="55.4234" data-saved-lon="-5.7357" type="button">Machrihanish</button>
+          <button class="savedLocationBtn" data-saved-name="Campbeltown Airport" data-saved-admin2="Argyll and Bute" data-saved-admin1="Scotland" data-saved-country="United Kingdom" data-saved-lat="55.4372" data-saved-lon="-5.6864" type="button">Campbeltown Airport</button>
+          <button class="savedLocationBtn" data-saved-name="Mach X" data-saved-admin2="Campbeltown Airport" data-saved-admin1="Scotland" data-saved-country="United Kingdom" data-saved-lat="55.4372" data-saved-lon="-5.6864" data-launch-site="machx" type="button">Mach X</button>
+        </div>
+
+        <div class="controls">
+          <div class="field"><label for="daysSelect">Forecast</label><select id="daysSelect"><option value="1">1 day</option><option value="3">3 days</option><option value="7" selected>7 days</option><option value="10">10 days</option><option value="15">15 days</option></select></div>
+          <div class="field"><label for="windUnitSelect">Wind</label><select id="windUnitSelect"><option value="kt">knots</option><option value="ms">m/s</option><option value="kmh">km/h</option><option value="mph" selected>mph</option></select></div>
+          <div class="field"><label for="aloftStepSelect">Aloft step</label><select id="aloftStepSelect"><option value="100">100 m interpolated</option><option value="250">250 m interpolated</option><option value="500">500 m interpolated</option><option value="raw" selected>Raw pressure levels</option></select></div>
+          <div class="field"><label>&nbsp;</label><button class="secondary" id="themeBtn" type="button" title="Toggle high-contrast light mode for bright sunlight">Sun mode</button></div>
+          <div class="field"><label>&nbsp;</label><button class="secondary" id="gpsBtn" type="button">Use GPS</button></div>
+          <div class="field"><label>&nbsp;</label><button id="liveBtn" type="button" title="Use GPS, jump to now, and keep the forecast refreshed">Live weather</button></div>
+        </div>
+        <div id="geoResults" class="results"></div>
+      </section>
+    </header>
+
+    <div id="notice" class="notice"></div>
+
+    <main class="dashboardGrid">
+      <section class="overviewGrid" id="overviewGrid" aria-label="Forecast overview">
+        <article class="card" id="currentCard"><h2>Current weather</h2><p class="muted">Search a location to load the forecast.</p></article>
+        <article class="card" id="dailyCard"><h2>Daily forecast</h2><p class="muted">Waiting for a location...</p></article>
+      </section>
+
+      <section class="mainDataGrid" aria-label="Winds aloft and nowcast">
+        <article class="card" id="aloftCard"><h2>Winds aloft</h2><p class="muted">Waiting for a location...</p></article>
+        <article class="card" id="launchWindowCard" hidden><h2>MachX launch window</h2><p class="muted">Select Mach X to calculate launch windows at Campbeltown Airport from 09:30 to 22:00.</p></article>
+        <article class="card" id="minuteRainCard"><details class="rainDropdown"><summary><span><span class="rainSummaryTitle">Rain nowcast</span><span class="rainSummarySub">15-minute rain forecast — hidden until opened</span></span></summary><div class="rainDropdownBody"><p class="muted">Waiting for a location...</p></div></details></article>
+      </section>
+
+      <article class="card" id="hourlyCard"><h2>Next forecast hours</h2><p class="muted">Waiting for a location...</p></article>
+    </main>
+
+    <footer>
+      Data: <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo</a>. Location search: Open-Meteo Geocoding / GeoNames. This page runs fully in the browser and is suitable for GitHub Pages. It is a planning aid only, not a safety or launch-permission product.
+    </footer>
+  </div>
+
+<script>
+(() => {
+  "use strict";
+
+  const PRESSURE_LEVEL_SETS = [
+    [1000, 975, 950, 925, 900, 850, 800, 700],
+    [1000, 950, 925, 900, 850, 800, 700],
+    [1000, 925, 850, 700]
+  ];
+  const MAX_AGL = 3000;
+  const LAUNCH_UNUSABLE_SCORE = 55;
+
+  const el = {
+    locationInput: document.getElementById("locationInput"),
+    searchBtn: document.getElementById("searchBtn"),
+    gpsBtn: document.getElementById("gpsBtn"),
+    liveBtn: document.getElementById("liveBtn"),
+    themeBtn: document.getElementById("themeBtn"),
+    daysSelect: document.getElementById("daysSelect"),
+    windUnitSelect: document.getElementById("windUnitSelect"),
+    aloftStepSelect: document.getElementById("aloftStepSelect"),
+    geoResults: document.getElementById("geoResults"),
+    notice: document.getElementById("notice"),
+    overviewGrid: document.getElementById("overviewGrid"),
+    currentCard: document.getElementById("currentCard"),
+    dailyCard: document.getElementById("dailyCard"),
+    minuteRainCard: document.getElementById("minuteRainCard"),
+    launchWindowCard: document.getElementById("launchWindowCard"),
+    hourlyCard: document.getElementById("hourlyCard"),
+    aloftCard: document.getElementById("aloftCard")
+  };
+
+  const savedDuration = Number(localStorage.getItem("weatherAloftLaunchDurationHours"));
+  let state = {
+    location: null,
+    surface: null,
+    aloft: null,
+    aloftLevels: [],
+    selectedAloftTime: null,
+    warning: "",
+    liveMode: false,
+    liveTimer: null,
+    lastLiveUpdate: null,
+    launchWindowDate: localStorage.getItem("weatherAloftLaunchDate") || "auto",
+    launchWindowDurationHours: [0.5, 1, 2, 3, 4].includes(savedDuration) ? savedDuration : 2
+  };
+
+  const WEATHER_CODES = {
+    0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
+    45: "Fog", 48: "Depositing rime fog",
+    51: "Light drizzle", 53: "Drizzle", 55: "Dense drizzle",
+    56: "Freezing drizzle", 57: "Dense freezing drizzle",
+    61: "Slight rain", 63: "Rain", 65: "Heavy rain",
+    66: "Freezing rain", 67: "Heavy freezing rain",
+    71: "Slight snow", 73: "Snow", 75: "Heavy snow", 77: "Snow grains",
+    80: "Slight rain showers", 81: "Rain showers", 82: "Violent showers",
+    85: "Snow showers", 86: "Heavy snow showers",
+    95: "Thunderstorm", 96: "Thunderstorm + hail", 99: "Severe thunderstorm + hail"
+  };
+
+  function finite(v) { return typeof v === "number" && Number.isFinite(v); }
+  function escapeHtml(value) { return String(value ?? "").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[c])); }
+  function round(value, dp = 0) { return value === null || value === undefined || Number.isNaN(value) ? "—" : Number(value).toFixed(dp); }
+  function setBusy(isBusy) { el.searchBtn.disabled = isBusy; el.gpsBtn.disabled = isBusy; el.liveBtn.disabled = isBusy; el.searchBtn.textContent = isBusy ? "Loading..." : "Search"; }
+  function showNotice(message, type = "") { el.notice.textContent = message || ""; el.notice.className = `notice ${message ? "show" : ""} ${type}`.trim(); }
+  function setSunMode(on) { document.body.classList.toggle("sunMode", Boolean(on)); el.themeBtn.classList.toggle("themeToggleActive", Boolean(on)); el.themeBtn.textContent = on ? "Sun mode: on" : "Sun mode"; el.themeBtn.setAttribute("aria-pressed", on ? "true" : "false"); localStorage.setItem("weatherAloftSunMode", on ? "1" : "0"); }
+
+  setSunMode(localStorage.getItem("weatherAloftSunMode") === "1");
+
+  function buildParams(params) {
+    const search = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (Array.isArray(value)) search.set(key, value.join(","));
+      else if (value !== undefined && value !== null && value !== "") search.set(key, String(value));
+    });
+    return search.toString();
+  }
+  async function fetchJson(url) {
+    const response = await fetch(url);
+    const data = await response.json().catch(() => null);
+    if (!response.ok || data?.error) throw new Error(data?.reason || `Request failed: ${response.status}`);
+    return data;
+  }
+  function parseLocalParts(iso) {
+    const [date, time = "00:00"] = String(iso).split("T");
+    const [y, m, d] = date.split("-").map(Number);
+    const [hh = 0, mm = 0] = time.split(":").map(Number);
+    return { y, m, d, hh, mm, date, time };
+  }
+  function localStamp(iso) { const p = parseLocalParts(iso); return Date.UTC(p.y, p.m - 1, p.d, p.hh, p.mm || 0); }
+  function formatLocal(iso, includeDate = true) {
+    if (!iso) return "—";
+    const p = parseLocalParts(iso);
+    const dateObj = new Date(Date.UTC(p.y, p.m - 1, p.d, p.hh, p.mm || 0));
+    const weekday = new Intl.DateTimeFormat("en-GB", { weekday: "short", timeZone: "UTC" }).format(dateObj);
+    const month = new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC" }).format(dateObj);
+    const hm = `${String(p.hh).padStart(2, "0")}:${String(p.mm || 0).padStart(2, "0")}`;
+    return includeDate ? `${weekday} ${p.d} ${month} ${hm}` : hm;
+  }
+  function formatDay(dateIso) {
+    const p = parseLocalParts(dateIso);
+    const dateObj = new Date(Date.UTC(p.y, p.m - 1, p.d));
+    const weekday = new Intl.DateTimeFormat("en-GB", { weekday: "short", timeZone: "UTC" }).format(dateObj);
+    const month = new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC" }).format(dateObj);
+    return `${weekday} ${p.d} ${month}`;
+  }
+  function weatherText(code) { return WEATHER_CODES[Number(code)] || `Code ${code ?? "—"}`; }
+  function dirText(deg) {
+    if (deg === null || deg === undefined || Number.isNaN(deg)) return "—";
+    const dirs = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+    return dirs[Math.round((((deg % 360) + 360) % 360) / 22.5) % 16];
+  }
+  function windUnitInfo() {
+    const unit = el.windUnitSelect.value;
+    const conversions = { ms: [1, "m/s", 1], kt: [1.94384449, "kt", 0], kmh: [3.6, "km/h", 0], mph: [2.23693629, "mph", 0] };
+    const [factor, label, dp] = conversions[unit] || conversions.mph;
+    return { unit, factor, label, dp };
+  }
+  function windToUser(ms) {
+    const info = windUnitInfo();
+    if (!finite(ms)) return { value: "—", unit: info.label, numeric: null };
+    return { value: (ms * info.factor).toFixed(info.dp), unit: info.label, numeric: ms * info.factor };
+  }
+  function msToMphNumber(ms) { return finite(ms) ? ms * 2.23693629 : null; }
+
+  function looksLikeCoordinates(text) {
+    const match = text.trim().match(/^(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)$/);
+    if (!match) return null;
+    const latitude = Number(match[1]);
+    const longitude = Number(match[2]);
+    if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return null;
+    return { latitude, longitude, name: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`, admin1: "", admin2: "", country: "Custom coordinates", elevation: null };
+  }
+  async function geocode(query) {
+    const coord = looksLikeCoordinates(query);
+    if (coord) return [coord];
+    const url = "https://geocoding-api.open-meteo.com/v1/search?" + buildParams({ name: query, count: 8, language: "en", format: "json" });
+    const data = await fetchJson(url);
+    return data.results || [];
+  }
+  async function reverseGeocode(latitude, longitude) {
+    const url = "https://geocoding-api.open-meteo.com/v1/reverse?" + buildParams({ latitude, longitude, count: 1, language: "en", format: "json" });
+    const data = await fetchJson(url);
+    const match = data.results?.[0];
+    return match ? { ...match, latitude, longitude, elevation: match.elevation ?? null, gpsLatitude: latitude, gpsLongitude: longitude } : null;
+  }
+  function locationLabel(loc) {
+    const label = [loc.name, loc.admin2, loc.admin1, loc.country].filter(Boolean).join(", ");
+    if (label) return label;
+    if (finite(loc.latitude) && finite(loc.longitude)) return `${Number(loc.latitude).toFixed(4)}, ${Number(loc.longitude).toFixed(4)}`;
+    return "Selected location";
+  }
+
+  function surfaceUrl(loc) {
+    const current = ["temperature_2m", "apparent_temperature", "relative_humidity_2m", "is_day", "precipitation", "weather_code", "cloud_cover", "pressure_msl", "surface_pressure", "wind_speed_10m", "wind_direction_10m", "wind_gusts_10m"];
+    const hourly = ["temperature_2m", "apparent_temperature", "precipitation_probability", "precipitation", "weather_code", "cloud_cover", "visibility", "pressure_msl", "surface_pressure", "wind_speed_10m", "wind_direction_10m", "wind_gusts_10m"];
+    const minutely15 = ["precipitation", "rain", "snowfall", "weather_code"];
+    const daily = ["weather_code", "temperature_2m_max", "temperature_2m_min", "precipitation_sum", "precipitation_probability_max", "wind_speed_10m_max", "wind_gusts_10m_max", "wind_direction_10m_dominant", "sunrise", "sunset"];
+    return "https://api.open-meteo.com/v1/forecast?" + buildParams({ latitude: loc.latitude, longitude: loc.longitude, current, hourly, minutely_15: minutely15, daily, timezone: "auto", forecast_days: el.daysSelect.value, forecast_minutely_15: 32, temperature_unit: "celsius", wind_speed_unit: "ms", precipitation_unit: "mm" });
+  }
+  function aloftVariables(levels) {
+    const out = [];
+    for (const level of levels) out.push(`wind_speed_${level}hPa`, `wind_direction_${level}hPa`, `geopotential_height_${level}hPa`, `temperature_${level}hPa`, `cloud_cover_${level}hPa`);
+    return out;
+  }
+  function aloftUrl(loc, levels) {
+    return "https://api.open-meteo.com/v1/ecmwf?" + buildParams({ latitude: loc.latitude, longitude: loc.longitude, hourly: aloftVariables(levels), timezone: "auto", forecast_days: Math.min(Number(el.daysSelect.value), 15), temperature_unit: "celsius", wind_speed_unit: "ms" });
+  }
+  async function loadAloftWithFallback(loc) {
+    let lastError = null;
+    for (const levels of PRESSURE_LEVEL_SETS) {
+      try {
+        const data = await fetchJson(aloftUrl(loc, levels));
+        return { data, levels, warning: levels.length < PRESSURE_LEVEL_SETS[0].length ? `Using a reduced pressure-level set: ${levels.join(", ")} hPa.` : "" };
+      } catch (err) { lastError = err; }
+    }
+    throw lastError || new Error("Could not load winds aloft.");
+  }
+
+  async function searchLocation(query) {
+    showNotice("");
+    el.geoResults.innerHTML = "";
+    if (!query.trim()) return;
+    setBusy(true);
+    try {
+      let results = await geocode(query);
+      if (!results.length && query.includes(",")) {
+        const shortQuery = query.split(",")[0].trim();
+        if (shortQuery && shortQuery !== query.trim()) results = await geocode(shortQuery);
+      }
+      if (!results.length) { showNotice("No matching location found. Try a nearby town, postcode, or latitude,longitude.", "warn"); return; }
+      if (results.length === 1 || looksLikeCoordinates(query)) { await loadLocation(results[0]); return; }
+      el.geoResults.innerHTML = results.map((r, i) => `<button class="resultBtn" data-index="${i}" type="button"><strong>${escapeHtml(locationLabel(r))}</strong><br><span class="muted small">${round(r.latitude, 4)}, ${round(r.longitude, 4)}${r.elevation != null ? ` · ${round(r.elevation)} m elevation` : ""}</span></button>`).join("");
+      el.geoResults.querySelectorAll("button").forEach(button => button.addEventListener("click", () => loadLocation(results[Number(button.dataset.index)])));
+      showNotice("Choose the correct result above.");
+    } catch (err) { showNotice(err.message, "error"); }
+    finally { setBusy(false); }
+  }
+
+  async function loadLocation(loc) {
+    setBusy(true);
+    showNotice("Loading forecast...");
+    el.geoResults.innerHTML = "";
+    try {
+      const [surface, aloftPack] = await Promise.all([fetchJson(surfaceUrl(loc)), loadAloftWithFallback(loc)]);
+      state.location = loc;
+      state.surface = surface;
+      state.aloft = aloftPack.data;
+      state.aloftLevels = aloftPack.levels;
+      state.selectedAloftTime = state.liveMode ? nearestAloftTime(surface?.current?.time) : (state.aloft?.hourly?.time?.[0] || null);
+      state.warning = aloftPack.warning;
+      if (state.liveMode) state.lastLiveUpdate = new Date();
+      const label = locationLabel(loc);
+      el.locationInput.value = label;
+      localStorage.setItem("weatherAloftLastLocation", JSON.stringify(loc));
+      const params = new URLSearchParams({ lat: loc.latitude, lon: loc.longitude, name: label });
+      if (loc.launchSite) params.set("launchSite", loc.launchSite);
+      history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
+      renderAll();
+      showNotice(state.warning || `Loaded ${label}. Times shown are local to the forecast location.`, state.warning ? "warn" : "");
+    } catch (err) { showNotice(err.message, "error"); }
+    finally { setBusy(false); }
+  }
+
+  function nearestAloftTime(targetTime) {
+    const times = state.aloft?.hourly?.time || [];
+    if (!times.length) return null;
+    const target = targetTime ? localStamp(targetTime) : Date.now();
+    return times.reduce((best, t) => Math.abs(localStamp(t) - target) < Math.abs(localStamp(best) - target) ? t : best, times[0]);
+  }
+  function liveUpdateText() { return state.lastLiveUpdate ? `Live mode · refreshed ${state.lastLiveUpdate.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}` : "Live mode on"; }
+  function applyLocationMode() {
+    const launchOnly = isMachXLaunchLocation();
+    el.overviewGrid.hidden = launchOnly;
+    el.aloftCard.hidden = launchOnly;
+    el.minuteRainCard.hidden = launchOnly;
+    el.hourlyCard.hidden = launchOnly;
+    el.launchWindowCard.hidden = !launchOnly;
+  }
+  function renderAll() {
+    applyLocationMode();
+    if (isMachXLaunchLocation()) {
+      renderLaunchWindow();
+      return;
+    }
+    renderCurrent();
+    renderDaily();
+    renderMinuteRain();
+    renderAloft();
+    renderHourly();
+  }
+
+  function renderCurrent() {
+    const c = state.surface?.current;
+    if (!c) return;
+    const loc = state.location;
+    const wind = windToUser(c.wind_speed_10m);
+    const gust = windToUser(c.wind_gusts_10m);
+    el.currentCard.innerHTML = `<h2>${escapeHtml(locationLabel(loc))}</h2><p class="muted small">${formatLocal(c.time)} · ${escapeHtml(state.surface.timezone || "local time")} · elevation ${round(state.surface.elevation ?? loc.elevation)} m</p><div class="chips"><span class="chip">${round(c.temperature_2m)}°C · feels ${round(c.apparent_temperature)}°C</span><span class="chip">${escapeHtml(weatherText(c.weather_code))}</span><span class="chip">Wind ${wind.value} ${wind.unit} ${dirText(c.wind_direction_10m)} (${round(c.wind_direction_10m)}°)</span><span class="chip">Gust ${gust.value} ${gust.unit}</span><span class="chip">Humidity ${round(c.relative_humidity_2m)}%</span><span class="chip">Cloud ${round(c.cloud_cover)}%</span><span class="chip">MSL pressure ${round(c.pressure_msl)} hPa</span><span class="chip">Rain now ${round(c.precipitation, 1)} mm</span>${state.liveMode ? `<span class="chip">${escapeHtml(liveUpdateText())}</span>` : ""}</div>`;
+  }
+  function renderDaily() {
+    const d = state.surface?.daily;
+    if (!d?.time) return;
+    const cards = d.time.map((date, i) => {
+      const wind = windToUser(d.wind_speed_10m_max?.[i]);
+      const gust = windToUser(d.wind_gusts_10m_max?.[i]);
+      return `<div class="dayCard"><div class="dayTop"><strong>${formatDay(date)}</strong><span class="dayDate">${escapeHtml(weatherText(d.weather_code?.[i]))}</span></div><div class="dayTemp">${round(d.temperature_2m_max?.[i])}° / ${round(d.temperature_2m_min?.[i])}°</div><div class="muted small">Rain ${round(d.precipitation_sum?.[i], 1)} mm · ${round(d.precipitation_probability_max?.[i])}%</div><div class="muted small">Wind ${wind.value} ${wind.unit} ${dirText(d.wind_direction_10m_dominant?.[i])} · gust ${gust.value} ${gust.unit}</div><div class="muted small">Sun ${formatLocal(d.sunrise?.[i], false)}–${formatLocal(d.sunset?.[i], false)}</div></div>`;
+    }).join("");
+    el.dailyCard.innerHTML = `<h2>Daily forecast</h2><div class="dailyGrid">${cards}</div>`;
+  }
+
+  function rainClass(amount) { if (!finite(amount) || amount <= 0) return "Dry"; if (amount < 0.2) return "Spotting"; if (amount < 1.0) return "Light"; if (amount < 3.0) return "Moderate"; return "Heavy"; }
+  function formatDurationMinutes(minutes) { if (!finite(minutes) || minutes < 0) return "—"; if (minutes < 60) return `${Math.round(minutes)} min`; const h = Math.floor(minutes / 60); const m = Math.round(minutes % 60); return m ? `${h} h ${m} min` : `${h} h`; }
+  function minutelyRowsFromNow(limit = 32) {
+    const m = state.surface?.minutely_15;
+    if (!m?.time?.length) return [];
+    const now = state.surface?.current?.time ? localStamp(state.surface.current.time) : Date.now();
+    let start = m.time.findIndex(t => localStamp(t) >= now - 15 * 60 * 1000);
+    if (start < 0) start = 0;
+    return m.time.slice(start, start + limit).map((time, offset) => {
+      const i = start + offset;
+      return { time, precipitation: Number(m.precipitation?.[i] ?? 0), rain: Number(m.rain?.[i] ?? 0), snowfall: Number(m.snowfall?.[i] ?? 0), weatherCode: m.weather_code?.[i] };
+    });
+  }
+  function renderRainDropdown(bodyHtml, subtitle = "15-minute rain forecast — hidden until opened") {
+    const wasOpen = Boolean(el.minuteRainCard.querySelector(".rainDropdown")?.open);
+    el.minuteRainCard.innerHTML = `<details class="rainDropdown" ${wasOpen ? "open" : ""}><summary><span><span class="rainSummaryTitle">Rain nowcast</span><span class="rainSummarySub">${escapeHtml(subtitle)}</span></span></summary><div class="rainDropdownBody">${bodyHtml}</div></details>`;
+  }
+  function renderMinuteRain() {
+    const rowsData = minutelyRowsFromNow(32);
+    if (!rowsData.length) { renderRainDropdown(`<p class="muted">No 15-minute rain data was returned for this location/time.</p>`, "No 15-minute data returned"); return; }
+    const threshold = 0.01;
+    const nextWet = rowsData.find(r => finite(r.precipitation) && r.precipitation >= threshold);
+    const maxRow = rowsData.reduce((best, r) => Number(r.precipitation || 0) > Number(best.precipitation || 0) ? r : best, rowsData[0]);
+    const total2h = rowsData.slice(0, 8).reduce((sum, r) => sum + Number(r.precipitation || 0), 0);
+    const total4h = rowsData.slice(0, 16).reduce((sum, r) => sum + Number(r.precipitation || 0), 0);
+    const nowStamp = state.surface?.current?.time ? localStamp(state.surface.current.time) : Date.now();
+    const nextWetText = nextWet ? `${formatLocal(nextWet.time, false)} in ${formatDurationMinutes(Math.max(0, (localStamp(nextWet.time) - nowStamp) / 60000))} · ${round(nextWet.precipitation, 2)} mm/15 min` : "No rain in the next 8 h";
+    const maxText = maxRow && Number(maxRow.precipitation || 0) > 0 ? `${round(maxRow.precipitation, 2)} mm/15 min at ${formatLocal(maxRow.time, false)}` : "0.00 mm/15 min";
+    const rows = rowsData.map(r => {
+      const intensity = Number(r.precipitation || 0) * 4;
+      const wet = Number(r.precipitation || 0) >= threshold;
+      return `<tr class="${wet ? "rainRow" : ""}"><td>${formatLocal(r.time)}</td><td><strong>${round(r.precipitation, 2)} mm</strong><span class="rainIntensity">${rainClass(r.precipitation)}</span></td><td>${round(intensity, 2)} mm/h</td><td>${round(r.rain, 2)} mm</td><td>${round(r.snowfall, 2)} cm</td><td>${escapeHtml(weatherText(r.weatherCode))}</td></tr>`;
+    }).join("");
+    renderRainDropdown(`<div class="chips"><span class="chip">Next rain: ${escapeHtml(nextWetText)}</span><span class="chip">Next 2 h total ${round(total2h, 2)} mm</span><span class="chip">Next 4 h total ${round(total4h, 2)} mm</span><span class="chip">Peak ${escapeHtml(maxText)}</span></div><p class="muted small">Uses returned 15-minute precipitation timesteps. The page does not interpolate them into 1-minute values.</p><div class="tableWrap"><table><thead><tr><th>Time</th><th>Total precip</th><th>Rate equivalent</th><th>Rain</th><th>Snowfall</th><th>Weather</th></tr></thead><tbody>${rows}</tbody></table></div>`, `${escapeHtml(nextWetText)} · 2 h ${round(total2h, 2)} mm · 4 h ${round(total4h, 2)} mm`);
+  }
+
+  function surfacePointForTime(time) {
+    const h = state.surface?.hourly;
+    if (!h?.time?.length) return null;
+    let idx = h.time.indexOf(time);
+    if (idx < 0) {
+      const target = localStamp(time);
+      let best = 0, bestDiff = Infinity;
+      h.time.forEach((t, i) => { const diff = Math.abs(localStamp(t) - target); if (diff < bestDiff) { best = i; bestDiff = diff; } });
+      idx = best;
+    }
+    const elevation = Number(state.surface?.elevation ?? state.location?.elevation ?? 0);
+    return { label: "10 m surface", source: "surface", pressure: null, agl: 10, msl: elevation + 10, speed: h.wind_speed_10m?.[idx], dir: h.wind_direction_10m?.[idx], temp: h.temperature_2m?.[idx], cloud: h.cloud_cover?.[idx] };
+  }
+  function surfaceIndexForTime(time) {
+    const h = state.surface?.hourly;
+    if (!h?.time?.length) return -1;
+    let idx = h.time.indexOf(time);
+    if (idx >= 0) return idx;
+    const target = time ? localStamp(time) : Date.now();
+    let best = 0, bestDiff = Infinity;
+    h.time.forEach((t, i) => { const diff = Math.abs(localStamp(t) - target); if (diff < bestDiff) { best = i; bestDiff = diff; } });
+    return best;
+  }
+  function pressureForAloftTime(time) {
+    const h = state.surface?.hourly;
+    const idx = surfaceIndexForTime(time);
+    if (!h || idx < 0) return null;
+    return { time: h.time?.[idx], pressureMsl: h.pressure_msl?.[idx], surfacePressure: h.surface_pressure?.[idx] };
+  }
+  function rawAloftPoints(time) {
+    const data = state.aloft?.hourly;
+    if (!data?.time?.length) return [];
+    let idx = data.time.indexOf(time);
+    if (idx < 0) idx = 0;
+    const elevation = Number(state.surface?.elevation ?? state.location?.elevation ?? 0);
+    const points = [];
+    const surface = surfacePointForTime(time);
+    if (surface && finite(surface.speed) && finite(surface.dir)) points.push(surface);
+    for (const level of state.aloftLevels) {
+      const hgt = data[`geopotential_height_${level}hPa`]?.[idx];
+      const speed = data[`wind_speed_${level}hPa`]?.[idx];
+      const dir = data[`wind_direction_${level}hPa`]?.[idx];
+      const temp = data[`temperature_${level}hPa`]?.[idx];
+      const cloud = data[`cloud_cover_${level}hPa`]?.[idx];
+      if ([hgt, speed, dir].every(finite)) points.push({ label: `${level} hPa`, source: "pressure", pressure: level, msl: hgt, agl: hgt - elevation, speed, dir, temp, cloud });
+    }
+    return points.sort((a, b) => a.agl - b.agl);
+  }
+  function windToUV(speed, dirDeg) { const rad = dirDeg * Math.PI / 180; return { u: -speed * Math.sin(rad), v: -speed * Math.cos(rad) }; }
+  function uvToWind(u, v) { const speed = Math.sqrt(u * u + v * v); const dir = ((Math.atan2(-u, -v) * 180 / Math.PI) + 360) % 360; return { speed, dir }; }
+  function lerp(a, b, f) { return a + (b - a) * f; }
+  function interpolateAt(points, agl) {
+    const valid = points.filter(p => finite(p.agl) && finite(p.speed) && finite(p.dir)).sort((a, b) => a.agl - b.agl);
+    if (!valid.length) return null;
+    const exact = valid.find(p => Math.abs(p.agl - agl) < 25);
+    if (exact) return { ...exact, targetAgl: agl, interpolated: false };
+    let lower = null, upper = null;
+    for (let i = 0; i < valid.length - 1; i++) if (valid[i].agl <= agl && valid[i + 1].agl >= agl) { lower = valid[i]; upper = valid[i + 1]; break; }
+    if (!lower || !upper) return null;
+    const f = (agl - lower.agl) / (upper.agl - lower.agl);
+    const a = windToUV(lower.speed, lower.dir);
+    const b = windToUV(upper.speed, upper.dir);
+    const wind = uvToWind(lerp(a.u, b.u, f), lerp(a.v, b.v, f));
+    return { label: `${Math.round(agl)} m AGL`, source: `${lower.label} → ${upper.label}`, pressure: null, targetAgl: agl, agl, msl: lerp(lower.msl, upper.msl, f), speed: wind.speed, dir: wind.dir, temp: finite(lower.temp) && finite(upper.temp) ? lerp(lower.temp, upper.temp, f) : null, cloud: finite(lower.cloud) && finite(upper.cloud) ? lerp(lower.cloud, upper.cloud, f) : null, interpolated: true };
+  }
+  function aloftDisplayPoints(points, mode) {
+    if (mode === "raw") return points.filter(p => p.source === "surface" || (p.agl >= 0 && p.agl <= MAX_AGL)).filter(p => finite(p.agl) && finite(p.speed) && finite(p.dir)).sort((a, b) => a.agl - b.agl);
+    const step = Number(mode);
+    const targets = [10];
+    for (let h = step; h <= MAX_AGL; h += step) targets.push(h);
+    return targets.map(agl => interpolateAt(points, agl)).filter(Boolean).filter(p => finite(p.agl) && finite(p.speed) && finite(p.dir));
+  }
+  function windCell(point) {
+    const wind = windToUser(point.speed);
+    const width = Math.min(180, Number(point.speed || 0) * 8);
+    return `<span class="windArrow" style="transform: rotate(${Number(point.dir || 0)}deg)">↓</span>${wind.value} ${wind.unit} ${dirText(point.dir)} (${round(point.dir)}°)<span class="bar" style="width:${width}px"></span>`;
+  }
+  function aloftRows(points, mode) {
+    const display = aloftDisplayPoints(points, mode);
+    if (mode === "raw") return display.map(p => `<tr><td>${escapeHtml(p.label)}</td><td>${round(p.agl)} m</td><td>${round(p.msl)} m</td><td>${windCell(p)}</td><td>${round(p.cloud)}%</td><td>${round(p.temp, 1)}°C</td><td>${p.source === "surface" ? "surface forecast" : "pressure level"}</td></tr>`).join("");
+    return display.map(p => `<tr><td>${round(p.targetAgl ?? p.agl)} m</td><td>${round(p.msl)} m</td><td>${windCell(p)}</td><td>${round(p.cloud)}%</td><td>${round(p.temp, 1)}°C</td><td>${escapeHtml(p.interpolated ? `interpolated: ${p.source}` : p.label)}</td></tr>`).join("");
+  }
+  function aloftGraphHtml(points, mode) {
+    const display = aloftDisplayPoints(points, mode).filter(p => p.agl >= 0 && p.agl <= MAX_AGL && finite(p.speed));
+    if (display.length < 2) return `<div class="aloftGraphPanel"><strong>Winds aloft graph</strong><p class="muted small">Not enough wind levels are available to draw a graph.</p></div>`;
+    const info = windUnitInfo();
+    const speeds = display.map(p => p.speed * info.factor);
+    const maxSpeed = Math.max(5, Math.ceil(Math.max(...speeds) * 1.15));
+    const width = 820, height = 390, left = 66, right = 28, top = 26, bottom = 52;
+    const plotW = width - left - right;
+    const plotH = height - top - bottom;
+    const x = speed => left + (speed * info.factor / maxSpeed) * plotW;
+    const y = agl => top + (1 - agl / MAX_AGL) * plotH;
+    const path = display.map((p, i) => `${i ? "L" : "M"}${x(p.speed).toFixed(1)} ${y(p.agl).toFixed(1)}`).join(" ");
+    const area = `M${left} ${y(0)} ${display.map(p => `L${x(p.speed).toFixed(1)} ${y(p.agl).toFixed(1)}`).join(" ")} L${left} ${y(display[display.length - 1].agl).toFixed(1)} Z`;
+    const yTicks = [0, 500, 1000, 1500, 2000, 2500, 3000];
+    const xTicks = [0, 0.25, 0.5, 0.75, 1].map(f => Math.round(maxSpeed * f));
+    const grid = [
+      ...yTicks.map(t => `<line class="graphGrid" x1="${left}" y1="${y(t).toFixed(1)}" x2="${width - right}" y2="${y(t).toFixed(1)}"></line><text class="graphText" x="${left - 10}" y="${y(t).toFixed(1)}" text-anchor="end" dominant-baseline="middle">${t}</text>`),
+      ...xTicks.map(t => `<line class="graphGrid" x1="${(left + (t / maxSpeed) * plotW).toFixed(1)}" y1="${top}" x2="${(left + (t / maxSpeed) * plotW).toFixed(1)}" y2="${height - bottom}"></line><text class="graphText" x="${(left + (t / maxSpeed) * plotW).toFixed(1)}" y="${height - 24}" text-anchor="middle">${t}</text>`)
+    ].join("");
+    const pointsSvg = display.map(p => `<circle class="graphPoint" cx="${x(p.speed).toFixed(1)}" cy="${y(p.agl).toFixed(1)}" r="4"><title>${escapeHtml(p.label)} · ${round(p.agl)} m · ${round(p.speed * info.factor, info.dp)} ${info.label} from ${round(p.dir)}°</title></circle>`).join("");
+    const maxPoint = display.reduce((best, p) => p.speed > best.speed ? p : best, display[0]);
+    return `<div class="aloftGraphPanel"><div class="graphTop"><div><strong>Winds aloft graph</strong><p class="muted small" style="margin:4px 0 0">Wind speed versus height AGL for the selected forecast time.</p></div><div class="chips" style="margin-top:0"><span class="chip">Max ${round(maxPoint.speed * info.factor, info.dp)} ${info.label} at ${round(maxPoint.agl)} m</span><span class="chip">${display.length} plotted levels</span></div></div><div class="graphScroll"><svg class="aloftSvg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Wind aloft graph"><path class="graphArea" d="${area}"></path>${grid}<line class="graphAxis" x1="${left}" y1="${top}" x2="${left}" y2="${height - bottom}"></line><line class="graphAxis" x1="${left}" y1="${height - bottom}" x2="${width - right}" y2="${height - bottom}"></line><path class="graphLine" d="${path}"></path>${pointsSvg}<text class="graphTitleText" x="${width / 2}" y="${height - 5}" text-anchor="middle">Wind speed (${escapeHtml(info.label)})</text><text class="graphTitleText" x="17" y="${height / 2}" text-anchor="middle" transform="rotate(-90 17 ${height / 2})">Height AGL (m)</text></svg></div></div>`;
+  }
+  function pressureChipHtml(label, value, suffix = "") { return `<span class="chip">${escapeHtml(label)} ${finite(value) ? `${round(value, 1)} hPa` : "—"}${suffix ? ` · ${escapeHtml(suffix)}` : ""}</span>`; }
+  function aloftPressureSummaryHtml(time) {
+    const current = state.surface?.current;
+    const forecast = pressureForAloftTime(time);
+    const currentTime = current?.time ? formatLocal(current.time, false) : "now";
+    const forecastTime = forecast?.time ? formatLocal(forecast.time, false) : "selected time";
+    return `<div class="chips" aria-label="Sea-level pressure summary">${pressureChipHtml("Current MSL", current?.pressure_msl, currentTime)}${pressureChipHtml("Forecast MSL", forecast?.pressureMsl, forecastTime)}${pressureChipHtml("Surface pressure", current?.surface_pressure, currentTime)}</div>`;
+  }
+  function renderAloft() {
+    const times = state.aloft?.hourly?.time || [];
+    if (!times.length) return;
+    const current = state.surface?.current?.time;
+    if (state.liveMode) state.selectedAloftTime = nearestAloftTime(current);
+    if (!state.selectedAloftTime || !times.includes(state.selectedAloftTime)) state.selectedAloftTime = nearestAloftTime(current);
+    const options = times.map(t => `<option value="${escapeHtml(t)}" ${t === state.selectedAloftTime ? "selected" : ""}>${formatLocal(t)}</option>`).join("");
+    const points = rawAloftPoints(state.selectedAloftTime);
+    const mode = el.aloftStepSelect.value;
+    const rows = aloftRows(points, mode);
+    const header = mode === "raw" ? `<tr><th>Level</th><th>Height AGL</th><th>Height MSL</th><th>Wind</th><th>Cloud</th><th>Temp</th><th>Source</th></tr>` : `<tr><th>Target height AGL</th><th>Height MSL</th><th>Wind</th><th>Cloud</th><th>Temp</th><th>Source</th></tr>`;
+    const emptyColspan = mode === "raw" ? 7 : 6;
+    el.aloftCard.innerHTML = `<h2>Winds aloft to ${MAX_AGL} m AGL</h2><div class="toolbar"><div class="field time"><label for="aloftTimeSelect">Forecast time</label><select id="aloftTimeSelect">${options}</select></div><div class="field"><label>Pressure levels</label><input readonly value="${escapeHtml(state.aloftLevels.join(", "))} hPa"></div><div class="field"><label>&nbsp;</label><button class="secondary" id="copyCsvBtn" type="button">Copy CSV</button></div><div class="field"><label>&nbsp;</label><button class="secondary" id="openRocketCsvBtn" type="button">OpenRocket CSV</button></div></div>${aloftPressureSummaryHtml(state.selectedAloftTime)}${aloftGraphHtml(points, mode)}<p class="muted small">Model pressure-level forecast data. Heights are AGL from local terrain; arrows show wind direction visually while text/degrees use meteorological wind-from direction.</p><div class="tableWrap"><table><thead>${header}</thead><tbody>${rows || `<tr><td colspan="${emptyColspan}">No aloft rows available for this time/location.</td></tr>`}</tbody></table></div>`;
+    document.getElementById("aloftTimeSelect")?.addEventListener("change", e => { state.selectedAloftTime = e.target.value; renderAloft(); renderLaunchWindow(); });
+    document.getElementById("copyCsvBtn")?.addEventListener("click", copyAloftCsv);
+    document.getElementById("openRocketCsvBtn")?.addEventListener("click", downloadOpenRocketCsv);
+  }
+  function copyAloftCsv() {
+    const points = rawAloftPoints(state.selectedAloftTime);
+    const mode = el.aloftStepSelect.value;
+    const rows = [];
+    for (const p of aloftDisplayPoints(points, mode)) {
+      const w = windToUser(p.speed);
+      const pr = pressureForAloftTime(state.selectedAloftTime);
+      rows.push([state.selectedAloftTime, p.label, round(p.agl), round(p.msl), w.value, w.unit, round(p.dir), dirText(p.dir), round(p.cloud), round(p.temp, 1), finite(pr?.pressureMsl) ? round(pr.pressureMsl, 1) : "", finite(state.surface?.current?.pressure_msl) ? round(state.surface.current.pressure_msl, 1) : "", p.source]);
+    }
+    const header = ["time_local", "level", "height_agl_m", "height_msl_m", "wind_speed", "wind_unit", "wind_from_deg", "wind_from_compass", "cloud_cover_pct", "temp_c", "forecast_msl_pressure_hpa", "current_msl_pressure_hpa", "source"];
+    const csv = [header, ...rows].map(row => row.map(cell => `"${String(cell ?? "").replaceAll('"', '""')}"`).join(",")).join("\n");
+    navigator.clipboard?.writeText(csv).then(() => showNotice("Copied winds-aloft CSV to clipboard."), () => showNotice("Could not copy CSV in this browser.", "warn"));
+  }
+  function safeFilenamePart(value) { return String(value || "wind_profile").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 60) || "wind_profile"; }
+  function roundedNumber(value, dp = 2) { return finite(value) ? Number(value).toFixed(dp) : ""; }
+  function dedupeByAltitude(rows) {
+    const seen = new Set();
+    return rows.filter(r => finite(r.altitude) && finite(r.velocity) && finite(r.direction)).sort((a, b) => a.altitude - b.altitude).filter(r => { const key = Math.round(r.altitude); if (seen.has(key)) return false; seen.add(key); return true; });
+  }
+  function openRocketRows() {
+    const points = rawAloftPoints(state.selectedAloftTime);
+    const rows = [];
+    const surface = points.find(p => p.source === "surface" && finite(p.speed) && finite(p.dir)) || points.find(p => finite(p.speed) && finite(p.dir) && p.agl >= 0);
+    if (surface) rows.push({ altitude: 0, velocity: surface.speed, direction: surface.dir, stdDev: 0 });
+    for (const p of aloftDisplayPoints(points, el.aloftStepSelect.value)) if (p.agl >= 0 && p.agl <= MAX_AGL) rows.push({ altitude: p.targetAgl ?? p.agl, velocity: p.speed, direction: p.dir, stdDev: 0 });
+    return dedupeByAltitude(rows);
+  }
+  function downloadTextFile(filename, text, mime = "text/csv") {
+    const blob = new Blob([text], { type: `${mime};charset=utf-8` });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  function downloadOpenRocketCsv() {
+    const rows = openRocketRows();
+    if (!rows.length) { showNotice("No valid wind profile rows are available to export.", "warn"); return; }
+    const header = ["altitude", "speed", "direction", "stddev"];
+    const csvRows = rows.map(r => [roundedNumber(r.altitude, 0), roundedNumber(r.velocity, 2), roundedNumber(((r.direction % 360) + 360) % 360, 0), roundedNumber(r.stdDev, 2)]);
+    const csv = [header, ...csvRows].map(row => row.join(",")).join("\n");
+    const loc = safeFilenamePart(locationLabel(state.location));
+    const time = safeFilenamePart(state.selectedAloftTime || "forecast");
+    downloadTextFile(`openrocket_wind_${loc}_${time}.csv`, csv);
+    showNotice(`Downloaded OpenRocket wind CSV with ${rows.length} altitude rows. It uses OpenRocket headers altitude,speed,direction,stddev.`);
+  }
+
+  function isMachXLaunchLocation() { return state.location?.launchSite === "machx"; }
+  function avgNumber(values) { const nums = values.filter(finite); return nums.length ? nums.reduce((sum, value) => sum + value, 0) / nums.length : null; }
+  function maxNumber(values) { const nums = values.filter(finite); return nums.length ? Math.max(...nums) : null; }
+  function minNumber(values) { const nums = values.filter(finite); return nums.length ? Math.min(...nums) : null; }
+  function launchDurationLabel(hours = state.launchWindowDurationHours) { return Number(hours) === 0.5 ? "30 mins" : `${Number(hours)}h`; }
+  function launchForecastDates() { const h = state.surface?.hourly; return h?.time?.length ? [...new Set(h.time.map(t => parseLocalParts(t).date))].sort() : []; }
+  function launchDayLabel(date) {
+    if (!date) return "Best loaded day";
+    const label = formatDay(date);
+    const today = state.surface?.current?.time ? parseLocalParts(state.surface.current.time).date : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(new Date().getDate()).padStart(2, "0")}`;
+    const tomorrow = new Date(`${today}T12:00:00`);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowDate = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, "0")}-${String(tomorrow.getDate()).padStart(2, "0")}`;
+    if (date === today) return `Today · ${label}`;
+    if (date === tomorrowDate) return `Tomorrow · ${label}`;
+    return label;
+  }
+  function selectedLaunchDate() {
+    const dates = launchForecastDates();
+    if (state.launchWindowDate === "auto") return null;
+    if (dates.includes(state.launchWindowDate)) return state.launchWindowDate;
+    state.launchWindowDate = "auto";
+    localStorage.setItem("weatherAloftLaunchDate", "auto");
+    return null;
+  }
+  function launchControlsHtml() {
+    const durationOptions = [["0.5", "30 mins"], ["1", "1h"], ["2", "2h"], ["3", "3h"], ["4", "4h"]].map(([value, label]) => `<option value="${value}"${value === String(state.launchWindowDurationHours) ? " selected" : ""}>${label}</option>`).join("");
+    const selected = selectedLaunchDate() || "auto";
+    const dayOptions = [`<option value="auto"${selected === "auto" ? " selected" : ""}>Best loaded day</option>`, ...launchForecastDates().map(date => `<option value="${escapeHtml(date)}"${date === selected ? " selected" : ""}>${escapeHtml(launchDayLabel(date))}</option>`)].join("");
+    return `<div class="launchControls"><div class="launchDayControl field"><label for="launchDateSelect">Launch day</label><select id="launchDateSelect">${dayOptions}</select></div><div class="launchDurationControl field"><label for="launchDurationSelect">Window length</label><select id="launchDurationSelect">${durationOptions}</select></div></div>`;
+  }
+  function bindLaunchWindowControls() {
+    document.getElementById("launchDurationSelect")?.addEventListener("change", e => { state.launchWindowDurationHours = Number(e.target.value); localStorage.setItem("weatherAloftLaunchDurationHours", String(state.launchWindowDurationHours)); renderLaunchWindow(); });
+    document.getElementById("launchDateSelect")?.addEventListener("change", e => { state.launchWindowDate = e.target.value || "auto"; localStorage.setItem("weatherAloftLaunchDate", state.launchWindowDate); renderLaunchWindow(); });
+  }
+  function minuteOfDayToIso(date, minuteOfDay) { const hh = Math.floor(minuteOfDay / 60); const mm = minuteOfDay % 60; return `${date}T${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`; }
+  function windowTimeLabel(date, startMinuteOfDay, durationHours = state.launchWindowDurationHours) { const durationMinutes = Math.round(Number(durationHours) * 60); return `${formatLocal(minuteOfDayToIso(date, startMinuteOfDay))}–${formatLocal(minuteOfDayToIso(date, startMinuteOfDay + durationMinutes), false)}`; }
+  function worstWeatherPenalty(codes) {
+    let penalty = 0;
+    for (const raw of codes) {
+      const code = Number(raw);
+      if (!Number.isFinite(code)) continue;
+      if (code >= 95) penalty = Math.max(penalty, 120);
+      else if (code >= 71 && code <= 86) penalty = Math.max(penalty, 80);
+      else if (code >= 61 && code <= 67) penalty = Math.max(penalty, 45);
+      else if (code >= 51 && code <= 57) penalty = Math.max(penalty, 20);
+      else if (code === 45 || code === 48) penalty = Math.max(penalty, 35);
+    }
+    return penalty;
+  }
+  function vectorShearFromSurface(points) {
+    const valid = points.filter(p => finite(p.agl) && p.agl >= 0 && p.agl <= MAX_AGL && finite(p.speed) && finite(p.dir)).sort((a, b) => a.agl - b.agl);
+    if (valid.length < 2) return null;
+    const base = windToUV(valid[0].speed, valid[0].dir);
+    let maxDiff = 0;
+    for (const p of valid.slice(1)) { const uv = windToUV(p.speed, p.dir); const diff = Math.hypot(uv.u - base.u, uv.v - base.v); if (diff > maxDiff) maxDiff = diff; }
+    return maxDiff;
+  }
+  function launchWindowRating(score) { if (score < 25) return "Good"; if (score < LAUNCH_UNUSABLE_SCORE) return "Usable"; if (score < 90) return "Marginal"; return "Poor"; }
+  function isLaunchWindowUsable(candidate) { return finite(candidate?.score) && candidate.score < LAUNCH_UNUSABLE_SCORE; }
+  function hourlyIndexesForWindow(h, date, startStamp, endStamp) {
+    const stamped = h.time.map((time, index) => ({ time, index, stamp: localStamp(time), parts: parseLocalParts(time) })).filter(x => x.parts.date === date);
+    const indexes = stamped.filter(x => x.stamp >= startStamp && x.stamp < endStamp).map(x => x.index);
+    if (indexes.length) return indexes;
+    const midpoint = startStamp + (endStamp - startStamp) / 2;
+    const nearest = stamped.map(x => ({ ...x, diff: Math.abs(x.stamp - midpoint) })).sort((a, b) => a.diff - b.diff)[0];
+    return nearest && nearest.diff <= 60 * 60 * 1000 ? [nearest.index] : [];
+  }
+  function machXLaunchCandidates(dateFilter = selectedLaunchDate()) {
+    const h = state.surface?.hourly;
+    if (!h?.time?.length) return [];
+    const durationHours = Number(state.launchWindowDurationHours || 2);
+    const durationMinutes = Math.round(durationHours * 60);
+    const nowStamp = state.surface?.current?.time ? localStamp(state.surface.current.time) : Date.now();
+    const dates = launchForecastDates().filter(date => !dateFilter || date === dateFilter);
+    const candidates = [];
+    for (const date of dates) {
+      const firstStartMinute = 9 * 60 + 30;
+      const lastStartMinute = 22 * 60 - durationMinutes;
+      if (lastStartMinute < firstStartMinute) continue;
+      for (let startMinute = firstStartMinute; startMinute <= lastStartMinute; startMinute += 30) {
+        const endMinute = startMinute + durationMinutes;
+        const startStamp = localStamp(minuteOfDayToIso(date, startMinute));
+        const endStamp = localStamp(minuteOfDayToIso(date, endMinute));
+        if (endStamp <= nowStamp - 10 * 60 * 1000) continue;
+        const indexes = hourlyIndexesForWindow(h, date, startStamp, endStamp);
+        if (!indexes.length) continue;
+        const rainScale = Math.min(1, durationHours / Math.max(indexes.length, 1));
+        const rainMm = indexes.reduce((sum, i) => sum + Number(h.precipitation?.[i] || 0), 0) * rainScale;
+        const popMax = maxNumber(indexes.map(i => h.precipitation_probability?.[i]));
+        const surfaceWindMax = maxNumber(indexes.map(i => h.wind_speed_10m?.[i]));
+        const surfaceWindAvg = avgNumber(indexes.map(i => h.wind_speed_10m?.[i]));
+        const gustMax = maxNumber(indexes.map(i => h.wind_gusts_10m?.[i]));
+        const cloudAvg = avgNumber(indexes.map(i => h.cloud_cover?.[i]));
+        const visibilityMin = minNumber(indexes.map(i => h.visibility?.[i]));
+        const weatherPenalty = worstWeatherPenalty(indexes.map(i => h.weather_code?.[i]));
+        const aloftMaxByHour = [];
+        const aloftShearByHour = [];
+        for (const i of indexes) {
+          const points = rawAloftPoints(h.time[i]).filter(p => finite(p.speed) && finite(p.dir) && finite(p.agl) && p.agl >= 0 && p.agl <= MAX_AGL);
+          aloftMaxByHour.push(maxNumber(points.map(p => p.speed)));
+          aloftShearByHour.push(vectorShearFromSurface(points));
+        }
+        const aloftMax = maxNumber(aloftMaxByHour);
+        const shearMax = maxNumber(aloftShearByHour);
+        const visibilityKm = finite(visibilityMin) ? visibilityMin / 1000 : null;
+        let score = 0;
+        score += rainMm * 90;
+        score += (popMax || 0) * 0.45;
+        score += Math.max(0, (surfaceWindMax || 0) - 5.36) * 5.0;
+        score += Math.max(0, (gustMax || 0) - 8.94) * 4.5;
+        score += Math.max(0, (aloftMax || 0) - 11.18) * 2.2;
+        score += Math.max(0, (shearMax || 0) - 6.0) * 2.0;
+        score += (cloudAvg || 0) * 0.06;
+        if (finite(visibilityMin) && visibilityMin < 5000) score += (5000 - visibilityMin) / 120;
+        score += weatherPenalty;
+        candidates.push({ date, startMinute, endMinute, durationHours, label: windowTimeLabel(date, startMinute, durationHours), score, rating: launchWindowRating(score), rainMm, popMax, surfaceWindMax, surfaceWindAvg, gustMax, cloudAvg, visibilityKm, aloftMax, shearMax, weatherPenalty });
+      }
+    }
+    return candidates.sort((a, b) => a.score - b.score);
+  }
+  function launchCandidatesChronological(candidates) { return [...candidates].sort((a, b) => a.date !== b.date ? a.date.localeCompare(b.date) : a.startMinute - b.startMinute); }
+  function launchUsableRuns(candidates) {
+    const chronological = launchCandidatesChronological(candidates);
+    const runs = [];
+    let active = null;
+    for (const candidate of chronological) {
+      const usable = isLaunchWindowUsable(candidate);
+      const continues = active && active.date === candidate.date && candidate.startMinute === active.lastStartMinute + 30;
+      if (!usable) { if (active) { active.stopper = continues ? candidate : null; runs.push(active); active = null; } continue; }
+      if (!active || !continues) { if (active) runs.push(active); active = { date: candidate.date, items: [], stopper: null, lastStartMinute: candidate.startMinute }; }
+      active.items.push(candidate);
+      active.lastStartMinute = candidate.startMinute;
+    }
+    if (active) runs.push(active);
+    return runs.map(run => {
+      const start = run.items[0];
+      const end = run.items[run.items.length - 1];
+      const durationMinutes = end.endMinute - start.startMinute;
+      const scores = run.items.map(item => item.score).filter(finite);
+      return { ...run, startMinute: start.startMinute, endMinute: end.endMinute, durationMinutes, avgScore: avgNumber(scores), maxScore: maxNumber(scores), label: `${formatLocal(minuteOfDayToIso(run.date, start.startMinute))}–${formatLocal(minuteOfDayToIso(run.date, end.endMinute), false)}` };
+    }).sort((a, b) => b.durationMinutes !== a.durationMinutes ? b.durationMinutes - a.durationMinutes : ((a.avgScore ?? 9999) - (b.avgScore ?? 9999)) || a.date.localeCompare(b.date) || a.startMinute - b.startMinute);
+  }
+  function compactDuration(minutes) { if (!finite(minutes)) return "—"; const mins = Math.round(minutes); const h = Math.floor(mins / 60); const m = mins % 60; if (h && m) return `${h}h ${m}m`; if (h) return `${h}h`; return `${m}m`; }
+  function launchCandidateRow(c, best, extraLabel = "") {
+    const stop = extraLabel ? `<span class="chip" style="margin-left:6px">${escapeHtml(extraLabel)}</span>` : "";
+    return `<tr class="${c === best ? "bestLaunchRow" : !isLaunchWindowUsable(c) ? "badLaunchRow" : ""}"><td><strong>${escapeHtml(c.label)}</strong>${stop}</td><td>${round(c.score, 0)} · ${escapeHtml(c.rating)}</td><td>${round(msToMphNumber(c.surfaceWindAvg), 0)} / ${round(msToMphNumber(c.surfaceWindMax), 0)} mph</td><td>${round(msToMphNumber(c.gustMax), 0)} mph</td><td>${round(msToMphNumber(c.aloftMax), 0)} mph</td><td>${round(msToMphNumber(c.shearMax), 0)} mph</td><td>${round(c.rainMm, 2)} mm · ${round(c.popMax)}%</td><td>${round(c.cloudAvg)}%</td><td>${finite(c.visibilityKm) ? `${round(c.visibilityKm, 1)} km` : "—"}</td></tr>`;
+  }
+  function launchScoreExplanationHtml() {
+    return `<details class="launchScoreExplanation"><summary>How the launch score is calculated</summary><ul><li><strong>Lower is better.</strong> The score starts at 0 and adds weather penalties for the chosen window.</li><li>Biggest penalties come from rain amount, rain probability, strong 10 m wind, strong gusts, strong winds aloft up to 3000 m, and vertical wind shear from the surface.</li><li>Smaller penalties are added for cloud cover and visibility below 5 km. Rain, snow, fog, and thunderstorm weather codes add extra fixed penalties.</li><li>Wind thresholds before penalties start: about <strong>12 mph</strong> surface wind, <strong>20 mph</strong> gusts, and <strong>25 mph</strong> winds aloft.</li><li>Ratings: <strong>Good</strong> &lt;25, <strong>Usable</strong> 25–54, <strong>Marginal/bad</strong> 55–89, <strong>Poor</strong> 90+.</li></ul></details>`;
+  }
+  function bestRunForDate(candidates, date) { return launchUsableRuns(candidates.filter(c => c.date === date))[0] || null; }
+  function launchDayOverviewHtml(candidates, best) {
+    const dates = [...new Set(candidates.map(c => c.date))].sort();
+    if (!dates.length) return "";
+    const rows = dates.map(date => {
+      const dayCandidates = candidates.filter(c => c.date === date).sort((a, b) => a.score - b.score);
+      const dayBest = dayCandidates[0];
+      const dayRun = bestRunForDate(candidates, date);
+      const usableCount = dayCandidates.filter(isLaunchWindowUsable).length;
+      return `<tr class="${dayBest === best ? "bestLaunchRow" : ""}"><td><strong>${escapeHtml(launchDayLabel(date))}</strong></td><td>${dayBest ? `${escapeHtml(dayBest.label)} · ${round(dayBest.score, 0)} ${escapeHtml(dayBest.rating)}` : "—"}</td><td>${usableCount}/${dayCandidates.length}</td><td>${dayRun ? `${escapeHtml(dayRun.label)} · ${escapeHtml(compactDuration(dayRun.durationMinutes))}` : "—"}</td></tr>`;
+    }).join("");
+    return `<h3 style="margin-top:14px">Loaded-day overview</h3><div class="tableWrap"><table><thead><tr><th>Day</th><th>Best window</th><th>Usable starts</th><th>Longest usable stretch</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }
+  function launchMiniStatsHtml(candidates, bestRun) {
+    const usableCount = candidates.filter(isLaunchWindowUsable).length;
+    const selected = selectedLaunchDate();
+    return `<div class="launchMiniGrid"><div class="launchMiniStat"><span>Launch day</span><strong>${escapeHtml(selected ? launchDayLabel(selected) : "Best loaded day")}</strong></div><div class="launchMiniStat"><span>Usable starts</span><strong>${usableCount} / ${candidates.length}</strong></div><div class="launchMiniStat"><span>Longest usable stretch</span><strong>${escapeHtml(bestRun ? compactDuration(bestRun.durationMinutes) : "None")}</strong></div><div class="launchMiniStat"><span>Bad/marginal starts</span><strong>${candidates.length - usableCount}</strong></div></div>`;
+  }
+  function renderLaunchWindow() {
+    const card = el.launchWindowCard;
+    if (!card) return;
+    if (!isMachXLaunchLocation()) { card.hidden = true; return; }
+    card.hidden = false;
+    const durationLabel = launchDurationLabel();
+    const selectedDate = selectedLaunchDate();
+    const selectedDateLabel = selectedDate ? launchDayLabel(selectedDate) : "best loaded day";
+    const candidates = machXLaunchCandidates(selectedDate);
+    if (!candidates.length) {
+      card.innerHTML = `<div class="launchHeader"><div><h2>MachX launch window</h2><p class="muted small" style="margin:0">Dedicated Mach X view for Campbeltown Airport. Choose a launch day and window length; candidate starts run from 09:30 to 22:00.</p></div>${launchControlsHtml()}</div><p class="muted">No complete ${escapeHtml(durationLabel)} launch windows were found for ${escapeHtml(selectedDateLabel)} between 09:30 and 22:00 in the currently loaded forecast. Increase the forecast length, choose another day, or try again later.</p>${launchScoreExplanationHtml()}`;
+      bindLaunchWindowControls();
+      return;
+    }
+    const best = candidates[0];
+    const usableRuns = launchUsableRuns(candidates);
+    const bestRun = usableRuns[0] || null;
+    const chronological = launchCandidatesChronological(candidates);
+    const allRows = chronological.map(c => launchCandidateRow(c, best)).join("");
+    const dayOverview = selectedDate ? "" : launchDayOverviewHtml(candidates, best);
+    let usableRunHtml = `<div class="launchRunBox"><strong>No usable continuous stretch found for the selected settings.</strong><p class="muted small" style="margin:6px 0 0">Every candidate window is already ${LAUNCH_UNUSABLE_SCORE}+ / marginal or worse. All windows are still listed below for comparison.</p></div>`;
+    const tableCaption = selectedDate ? "All launch windows for selected day · 09:30–22:00" : "All launch windows across loaded days · 09:30–22:00";
+    if (bestRun) {
+      const stopperText = bestRun.stopper ? `The next window, ${escapeHtml(bestRun.stopper.label)}, becomes ${escapeHtml(bestRun.stopper.rating)} (${round(bestRun.stopper.score, 0)}).` : "No bad/unusable score appears before the end of the loaded forecast range.";
+      const runStart = bestRun.items[0];
+      const runEnd = bestRun.items[bestRun.items.length - 1];
+      usableRunHtml = `<div class="launchRunBox"><strong>Best continuous usable stretch:</strong><div class="launchBestTime" style="font-size:clamp(1.15rem,2.4vw,1.9rem)">${escapeHtml(bestRun.label)}</div><div class="chips"><span class="chip">Total stretch ${escapeHtml(compactDuration(bestRun.durationMinutes))}</span><span class="chip">Checked as ${escapeHtml(durationLabel)} windows</span><span class="chip">Average score ${round(bestRun.avgScore, 0)}</span><span class="chip">Worst usable score ${round(bestRun.maxScore, 0)}</span><span class="chip">First usable start ${escapeHtml(runStart.label)}</span><span class="chip">Last usable start ${escapeHtml(runEnd.label)}</span></div><p class="muted small" style="margin:10px 0 0">${stopperText}</p></div>`;
+    }
+    card.innerHTML = `<div class="launchHeader"><div><h2>MachX launch window</h2><p class="muted small" style="margin:0">${escapeHtml(durationLabel)} launch-window ranking for ${escapeHtml(selectedDateLabel)} · Mach X at Campbeltown Airport · 09:30–22:00</p></div>${launchControlsHtml()}</div><div class="launchBest"><div><span class="chip">Best individual window</span><div class="launchBestTime">${escapeHtml(best.label)}</div><div class="chips"><span class="chip">Launch day ${escapeHtml(launchDayLabel(best.date))}</span><span class="chip">Length ${escapeHtml(durationLabel)}</span><span class="chip">10 m wind avg/max ${round(msToMphNumber(best.surfaceWindAvg), 0)}/${round(msToMphNumber(best.surfaceWindMax), 0)} mph</span><span class="chip">Gust max ${round(msToMphNumber(best.gustMax), 0)} mph</span><span class="chip">Aloft max ${round(msToMphNumber(best.aloftMax), 0)} mph</span><span class="chip">Shear from surface ${round(msToMphNumber(best.shearMax), 0)} mph</span><span class="chip">Rain ${round(best.rainMm, 2)} mm · ${round(best.popMax)}%</span></div></div><div class="launchScoreBox" title="Lower score is better"><span class="muted small">Suitability</span><span class="launchScoreValue">${round(best.score, 0)}</span><strong>${escapeHtml(best.rating)}</strong></div></div>${launchMiniStatsHtml(candidates, bestRun)}${usableRunHtml}<p class="muted small">Weather-ranking helper only. Every complete candidate window is listed in chronological order from 09:30 to 22:00, at 30-minute start intervals. The continuous-stretch summary still identifies where conditions first become bad/unusable. Still use your normal range, NOTAM, airspace, landowner, recovery, and club procedures.</p>${launchScoreExplanationHtml()}${dayOverview}<h3 style="margin-top:14px">${escapeHtml(tableCaption)}</h3><div class="tableWrap"><table><thead><tr><th>Window</th><th>Score</th><th>10 m wind avg/max</th><th>Gust max</th><th>Aloft max</th><th>Shear</th><th>Rain / chance</th><th>Cloud</th><th>Visibility</th></tr></thead><tbody>${allRows}</tbody></table></div>`;
+    bindLaunchWindowControls();
+  }
+
+  function renderHourly() {
+    const h = state.surface?.hourly;
+    if (!h?.time) return;
+    const now = state.surface?.current?.time ? localStamp(state.surface.current.time) : Date.now();
+    const startIndex = h.time.findIndex(t => localStamp(t) >= now);
+    const start = Math.max(0, startIndex);
+    const rows = h.time.slice(start, start + 36).map((time, offset) => {
+      const i = start + offset;
+      const wind = windToUser(h.wind_speed_10m?.[i]);
+      const gust = windToUser(h.wind_gusts_10m?.[i]);
+      const barWidth = Math.min(160, Number(h.wind_speed_10m?.[i] || 0) * 7);
+      return `<tr><td>${formatLocal(time)}</td><td>${round(h.temperature_2m?.[i])}°C</td><td>${escapeHtml(weatherText(h.weather_code?.[i]))}</td><td>${round(h.precipitation_probability?.[i])}% / ${round(h.precipitation?.[i], 1)} mm</td><td><span class="windArrow" style="transform: rotate(${Number(h.wind_direction_10m?.[i] || 0)}deg)">↓</span>${wind.value} ${wind.unit} ${dirText(h.wind_direction_10m?.[i])}<span class="bar" style="width:${barWidth}px"></span></td><td>${gust.value} ${gust.unit}</td><td>${round(h.cloud_cover?.[i])}%</td><td>${h.visibility?.[i] != null ? round(h.visibility[i] / 1000, 1) + " km" : "—"}</td></tr>`;
+    }).join("");
+    el.hourlyCard.innerHTML = `<h2>Next forecast hours</h2><div class="tableWrap"><table><thead><tr><th>Time</th><th>Temp</th><th>Weather</th><th>Rain</th><th>10 m wind</th><th>Gust</th><th>Cloud</th><th>Vis</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }
+
+  function savedLocationFromButton(button) { return { name: button.dataset.savedName, admin2: button.dataset.savedAdmin2, admin1: button.dataset.savedAdmin1, country: button.dataset.savedCountry, latitude: Number(button.dataset.savedLat), longitude: Number(button.dataset.savedLon), elevation: null, launchSite: button.dataset.launchSite || "" }; }
+  document.querySelectorAll(".savedLocationBtn").forEach(button => button.addEventListener("click", () => { stopLiveWeather(); const savedLoc = savedLocationFromButton(button); el.locationInput.value = locationLabel(savedLoc); loadLocation(savedLoc); }));
+  el.searchBtn.addEventListener("click", () => { stopLiveWeather(); searchLocation(el.locationInput.value); });
+  el.locationInput.addEventListener("keydown", e => { if (e.key === "Enter") { stopLiveWeather(); searchLocation(el.locationInput.value); } });
+  el.themeBtn.addEventListener("click", () => setSunMode(!document.body.classList.contains("sunMode")));
+  el.windUnitSelect.addEventListener("change", renderAll);
+  el.aloftStepSelect.addEventListener("change", () => { renderAloft(); renderLaunchWindow(); });
+  el.daysSelect.addEventListener("change", () => { if (state.location) loadLocation(state.location); });
+
+  function stopLiveWeather() { state.liveMode = false; if (state.liveTimer) clearInterval(state.liveTimer); state.liveTimer = null; el.liveBtn.textContent = "Live weather"; }
+  async function useGpsLocation({ live = false } = {}) {
+    if (!navigator.geolocation) { if (live) stopLiveWeather(); showNotice("This browser does not support geolocation. Enter a place or latitude,longitude instead.", "warn"); return; }
+    setBusy(true);
+    showNotice(live ? "Waiting for GPS permission for live weather..." : "Waiting for GPS permission...");
+    navigator.geolocation.getCurrentPosition(async pos => {
+      const latitude = pos.coords.latitude;
+      const longitude = pos.coords.longitude;
+      let loc = null;
+      try { loc = await reverseGeocode(latitude, longitude); } catch (err) { console.warn("Reverse geocoding failed", err); }
+      if (!loc) loc = { name: live ? "Live GPS location" : "GPS location", latitude, longitude, country: "GPS coordinates", admin1: "", admin2: "", elevation: null };
+      await loadLocation(loc);
+    }, err => { setBusy(false); if (live) stopLiveWeather(); showNotice(err.message || "Could not get GPS location.", "error"); }, { enableHighAccuracy: true, timeout: 10000, maximumAge: live ? 60000 : 600000 });
+  }
+  function startLiveWeather() {
+    state.liveMode = true;
+    el.daysSelect.value = "1";
+    el.liveBtn.textContent = "Live: on";
+    useGpsLocation({ live: true });
+    if (state.liveTimer) clearInterval(state.liveTimer);
+    state.liveTimer = setInterval(() => { if (state.liveMode) useGpsLocation({ live: true }); }, 10 * 60 * 1000);
+  }
+  el.gpsBtn.addEventListener("click", () => { stopLiveWeather(); useGpsLocation({ live: false }); });
+  el.liveBtn.addEventListener("click", () => { if (state.liveMode) { stopLiveWeather(); showNotice("Live weather mode is off. The current loaded forecast stays on screen."); } else startLiveWeather(); });
+
+  function initialLoad() {
+    const params = new URLSearchParams(location.search);
+    const lat = Number(params.get("lat"));
+    const lon = Number(params.get("lon"));
+    if (Number.isFinite(lat) && Number.isFinite(lon)) {
+      const loc = { latitude: lat, longitude: lon, name: params.get("name") || `${lat}, ${lon}`, country: "", admin1: "", admin2: "", elevation: null, launchSite: params.get("launchSite") || "" };
+      el.locationInput.value = loc.name;
+      loadLocation(loc);
+      return;
+    }
+    const last = localStorage.getItem("weatherAloftLastLocation");
+    if (last) {
+      try { const loc = JSON.parse(last); el.locationInput.value = locationLabel(loc); loadLocation(loc); return; } catch { /* ignore */ }
+    }
+    el.locationInput.value = "Bishop's Stortford";
+    searchLocation(el.locationInput.value);
+  }
+  initialLoad();
+})();
+</script>
+</body>
+</html>
