@@ -361,6 +361,17 @@
     .badLaunchRow td { background: rgba(248, 113, 113, 0.12); color: var(--text); border-top: 1px solid rgba(248, 113, 113, 0.28); }
     .launchScoreExplanation summary { cursor: pointer; font-weight: 850; color: var(--text); }
     .launchScoreExplanation ul { margin: 10px 0 0 18px; color: var(--muted); line-height: 1.55; padding: 0; }
+    .launchReasonBox { margin: 12px 0; padding: 13px 14px; border: 1px solid rgba(251, 191, 36, 0.28); border-radius: 16px; background: rgba(251, 191, 36, 0.075); }
+    .launchReasonBox strong { display: block; margin-bottom: 7px; }
+    .launchReasonList { display: flex; flex-wrap: wrap; gap: 7px; }
+    .launchReasonTag { display: inline-flex; align-items: center; gap: 5px; padding: 5px 8px; border: 1px solid rgba(251, 191, 36, 0.24); border-radius: 999px; background: rgba(251, 191, 36, 0.08); color: var(--text); font-size: 0.84rem; line-height: 1.25; }
+    .launchReasonTag b { color: var(--warn); }
+    .scoreReasons { min-width: 230px; max-width: 330px; white-space: normal; line-height: 1.35; }
+    .scoreReasonLine { display: block; margin: 2px 0; }
+    .scoreReasonLine strong { color: var(--text); }
+    .scoreReasonPenalty { color: var(--warn); font-weight: 850; white-space: nowrap; }
+    body.sunMode .launchReasonBox { background: rgba(154, 97, 0, 0.07); border-color: rgba(154, 97, 0, 0.25); }
+    body.sunMode .launchReasonTag { background: rgba(154, 97, 0, 0.07); border-color: rgba(154, 97, 0, 0.22); }
 
     footer { color: var(--muted-2); font-size: 0.86rem; margin-top: 24px; line-height: 1.55; padding: 0 4px; }
 
@@ -973,18 +984,20 @@
   }
   function minuteOfDayToIso(date, minuteOfDay) { const hh = Math.floor(minuteOfDay / 60); const mm = minuteOfDay % 60; return `${date}T${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`; }
   function windowTimeLabel(date, startMinuteOfDay, durationHours = state.launchWindowDurationHours) { const durationMinutes = Math.round(Number(durationHours) * 60); return `${formatLocal(minuteOfDayToIso(date, startMinuteOfDay))}–${formatLocal(minuteOfDayToIso(date, startMinuteOfDay + durationMinutes), false)}`; }
-  function worstWeatherPenalty(codes) {
-    let penalty = 0;
+  function worstWeatherInfo(codes) {
+    let result = { penalty: 0, reason: "" };
     for (const raw of codes) {
       const code = Number(raw);
       if (!Number.isFinite(code)) continue;
-      if (code >= 95) penalty = Math.max(penalty, 120);
-      else if (code >= 71 && code <= 86) penalty = Math.max(penalty, 80);
-      else if (code >= 61 && code <= 67) penalty = Math.max(penalty, 45);
-      else if (code >= 51 && code <= 57) penalty = Math.max(penalty, 20);
-      else if (code === 45 || code === 48) penalty = Math.max(penalty, 35);
+      let candidate = { penalty: 0, reason: "" };
+      if (code >= 95) candidate = { penalty: 120, reason: weatherText(code) };
+      else if (code >= 71 && code <= 86) candidate = { penalty: 80, reason: weatherText(code) };
+      else if (code >= 61 && code <= 67) candidate = { penalty: 45, reason: weatherText(code) };
+      else if (code >= 51 && code <= 57) candidate = { penalty: 20, reason: weatherText(code) };
+      else if (code === 45 || code === 48) candidate = { penalty: 35, reason: weatherText(code) };
+      if (candidate.penalty > result.penalty) result = candidate;
     }
-    return penalty;
+    return result;
   }
   function vectorShearFromSurface(points) {
     const valid = points.filter(p => finite(p.agl) && p.agl >= 0 && p.agl <= MAX_AGL && finite(p.speed) && finite(p.dir)).sort((a, b) => a.agl - b.agl);
@@ -996,6 +1009,43 @@
   }
   function launchWindowRating(score) { if (score < 25) return "Good"; if (score < LAUNCH_UNUSABLE_SCORE) return "Usable"; if (score < 90) return "Marginal"; return "Poor"; }
   function isLaunchWindowUsable(candidate) { return finite(candidate?.score) && candidate.score < LAUNCH_UNUSABLE_SCORE; }
+  function launchReasonEntries(candidate) {
+    const b = candidate?.scoreBreakdown || {};
+    const entries = [
+      { key: "rainAmount", label: "Rain amount", penalty: b.rainAmount, detail: `${round(candidate?.rainMm, 2)} mm` },
+      { key: "rainChance", label: "Rain chance", penalty: b.rainChance, detail: `${round(candidate?.popMax)}%` },
+      { key: "surfaceWind", label: "Surface wind", penalty: b.surfaceWind, detail: `${round(msToMphNumber(candidate?.surfaceWindMax), 0)} mph max` },
+      { key: "gusts", label: "Gusts", penalty: b.gusts, detail: `${round(msToMphNumber(candidate?.gustMax), 0)} mph` },
+      { key: "aloftWind", label: "Winds aloft", penalty: b.aloftWind, detail: `${round(msToMphNumber(candidate?.aloftMax), 0)} mph max` },
+      { key: "shear", label: "Wind shear", penalty: b.shear, detail: `${round(msToMphNumber(candidate?.shearMax), 0)} mph` },
+      { key: "cloud", label: "Cloud cover", penalty: b.cloud, detail: `${round(candidate?.cloudAvg)}%` },
+      { key: "visibility", label: "Low visibility", penalty: b.visibility, detail: finite(candidate?.visibilityKm) ? `${round(candidate.visibilityKm, 1)} km` : "—" },
+      { key: "weatherCode", label: "Weather type", penalty: b.weatherCode, detail: candidate?.weatherReason || "Adverse weather code" }
+    ];
+    return entries.filter(x => finite(x.penalty) && x.penalty > 0.05).sort((a, b) => b.penalty - a.penalty);
+  }
+  function launchReasonSummary(candidate, limit = 3) {
+    const entries = launchReasonEntries(candidate);
+    if (!entries.length) return { entries: [], otherPenalty: 0, plain: "No meaningful weather penalties" };
+    const shown = entries.slice(0, limit);
+    const otherPenalty = entries.slice(limit).reduce((sum, x) => sum + x.penalty, 0);
+    const plain = shown.map(x => `${x.label} ${x.detail} (+${round(x.penalty, 0)})`).join(", ") + (otherPenalty >= 0.5 ? `, other factors (+${round(otherPenalty, 0)})` : "");
+    return { entries: shown, otherPenalty, plain };
+  }
+  function launchReasonBoxHtml(candidate) {
+    const reason = launchReasonSummary(candidate, 4);
+    const title = isLaunchWindowUsable(candidate) ? "What contributes to this score" : "Why this score is bad/unusable";
+    const tags = reason.entries.map(x => `<span class="launchReasonTag">${escapeHtml(x.label)}: ${escapeHtml(x.detail)} <b>+${round(x.penalty, 0)}</b></span>`).join("");
+    const other = reason.otherPenalty >= 0.5 ? `<span class="launchReasonTag">Other combined <b>+${round(reason.otherPenalty, 0)}</b></span>` : "";
+    return `<div class="launchReasonBox"><strong>${escapeHtml(title)}</strong><div class="launchReasonList">${tags || `<span class="muted small">No meaningful weather penalties.</span>`}${other}</div></div>`;
+  }
+  function launchReasonCellHtml(candidate) {
+    const reason = launchReasonSummary(candidate, 3);
+    if (!reason.entries.length) return `<div class="scoreReasons muted small">No meaningful penalties</div>`;
+    const lines = reason.entries.map(x => `<span class="scoreReasonLine"><strong>${escapeHtml(x.label)}</strong> · ${escapeHtml(x.detail)} <span class="scoreReasonPenalty">+${round(x.penalty, 0)}</span></span>`).join("");
+    const other = reason.otherPenalty >= 0.5 ? `<span class="scoreReasonLine muted">Other combined <span class="scoreReasonPenalty">+${round(reason.otherPenalty, 0)}</span></span>` : "";
+    return `<div class="scoreReasons">${lines}${other}</div>`;
+  }
   function hourlyIndexesForWindow(h, date, startStamp, endStamp) {
     const stamped = h.time.map((time, index) => ({ time, index, stamp: localStamp(time), parts: parseLocalParts(time) })).filter(x => x.parts.date === date);
     const indexes = stamped.filter(x => x.stamp >= startStamp && x.stamp < endStamp).map(x => x.index);
@@ -1031,7 +1081,8 @@
         const gustMax = maxNumber(indexes.map(i => h.wind_gusts_10m?.[i]));
         const cloudAvg = avgNumber(indexes.map(i => h.cloud_cover?.[i]));
         const visibilityMin = minNumber(indexes.map(i => h.visibility?.[i]));
-        const weatherPenalty = worstWeatherPenalty(indexes.map(i => h.weather_code?.[i]));
+        const weatherInfo = worstWeatherInfo(indexes.map(i => h.weather_code?.[i]));
+        const weatherPenalty = weatherInfo.penalty;
         const aloftMaxByHour = [];
         const aloftShearByHour = [];
         for (const i of indexes) {
@@ -1042,17 +1093,19 @@
         const aloftMax = maxNumber(aloftMaxByHour);
         const shearMax = maxNumber(aloftShearByHour);
         const visibilityKm = finite(visibilityMin) ? visibilityMin / 1000 : null;
-        let score = 0;
-        score += rainMm * 90;
-        score += (popMax || 0) * 0.45;
-        score += Math.max(0, (surfaceWindMax || 0) - 5.36) * 5.0;
-        score += Math.max(0, (gustMax || 0) - 8.94) * 4.5;
-        score += Math.max(0, (aloftMax || 0) - 11.18) * 2.2;
-        score += Math.max(0, (shearMax || 0) - 6.0) * 2.0;
-        score += (cloudAvg || 0) * 0.06;
-        if (finite(visibilityMin) && visibilityMin < 5000) score += (5000 - visibilityMin) / 120;
-        score += weatherPenalty;
-        candidates.push({ date, startMinute, endMinute, durationHours, label: windowTimeLabel(date, startMinute, durationHours), score, rating: launchWindowRating(score), rainMm, popMax, surfaceWindMax, surfaceWindAvg, gustMax, cloudAvg, visibilityKm, aloftMax, shearMax, weatherPenalty });
+        const scoreBreakdown = {
+          rainAmount: rainMm * 90,
+          rainChance: (popMax || 0) * 0.45,
+          surfaceWind: Math.max(0, (surfaceWindMax || 0) - 5.36) * 5.0,
+          gusts: Math.max(0, (gustMax || 0) - 8.94) * 4.5,
+          aloftWind: Math.max(0, (aloftMax || 0) - 11.18) * 2.2,
+          shear: Math.max(0, (shearMax || 0) - 6.0) * 2.0,
+          cloud: (cloudAvg || 0) * 0.06,
+          visibility: finite(visibilityMin) && visibilityMin < 5000 ? (5000 - visibilityMin) / 120 : 0,
+          weatherCode: weatherPenalty
+        };
+        const score = Object.values(scoreBreakdown).reduce((sum, value) => sum + Number(value || 0), 0);
+        candidates.push({ date, startMinute, endMinute, durationHours, label: windowTimeLabel(date, startMinute, durationHours), score, rating: launchWindowRating(score), rainMm, popMax, surfaceWindMax, surfaceWindAvg, gustMax, cloudAvg, visibilityKm, aloftMax, shearMax, weatherPenalty, weatherReason: weatherInfo.reason, scoreBreakdown });
       }
     }
     return candidates.sort((a, b) => a.score - b.score);
@@ -1082,10 +1135,10 @@
   function compactDuration(minutes) { if (!finite(minutes)) return "—"; const mins = Math.round(minutes); const h = Math.floor(mins / 60); const m = mins % 60; if (h && m) return `${h}h ${m}m`; if (h) return `${h}h`; return `${m}m`; }
   function launchCandidateRow(c, best, extraLabel = "") {
     const stop = extraLabel ? `<span class="chip" style="margin-left:6px">${escapeHtml(extraLabel)}</span>` : "";
-    return `<tr class="${c === best ? "bestLaunchRow" : !isLaunchWindowUsable(c) ? "badLaunchRow" : ""}"><td><strong>${escapeHtml(c.label)}</strong>${stop}</td><td>${round(c.score, 0)} · ${escapeHtml(c.rating)}</td><td>${round(msToMphNumber(c.surfaceWindAvg), 0)} / ${round(msToMphNumber(c.surfaceWindMax), 0)} mph</td><td>${round(msToMphNumber(c.gustMax), 0)} mph</td><td>${round(msToMphNumber(c.aloftMax), 0)} mph</td><td>${round(msToMphNumber(c.shearMax), 0)} mph</td><td>${round(c.rainMm, 2)} mm · ${round(c.popMax)}%</td><td>${round(c.cloudAvg)}%</td><td>${finite(c.visibilityKm) ? `${round(c.visibilityKm, 1)} km` : "—"}</td></tr>`;
+    return `<tr class="${c === best ? "bestLaunchRow" : !isLaunchWindowUsable(c) ? "badLaunchRow" : ""}"><td><strong>${escapeHtml(c.label)}</strong>${stop}</td><td>${round(c.score, 0)} · ${escapeHtml(c.rating)}</td><td>${launchReasonCellHtml(c)}</td><td>${round(msToMphNumber(c.surfaceWindAvg), 0)} / ${round(msToMphNumber(c.surfaceWindMax), 0)} mph</td><td>${round(msToMphNumber(c.gustMax), 0)} mph</td><td>${round(msToMphNumber(c.aloftMax), 0)} mph</td><td>${round(msToMphNumber(c.shearMax), 0)} mph</td><td>${round(c.rainMm, 2)} mm · ${round(c.popMax)}%</td><td>${round(c.cloudAvg)}%</td><td>${finite(c.visibilityKm) ? `${round(c.visibilityKm, 1)} km` : "—"}</td></tr>`;
   }
   function launchScoreExplanationHtml() {
-    return `<details class="launchScoreExplanation"><summary>How the launch score is calculated</summary><ul><li><strong>Lower is better.</strong> The score starts at 0 and adds weather penalties for the chosen window.</li><li>Biggest penalties come from rain amount, rain probability, strong 10 m wind, strong gusts, strong winds aloft up to 3000 m, and vertical wind shear from the surface.</li><li>Smaller penalties are added for cloud cover and visibility below 5 km. Rain, snow, fog, and thunderstorm weather codes add extra fixed penalties.</li><li>Wind thresholds before penalties start: about <strong>12 mph</strong> surface wind, <strong>20 mph</strong> gusts, and <strong>25 mph</strong> winds aloft.</li><li>Ratings: <strong>Good</strong> &lt;25, <strong>Usable</strong> 25–54, <strong>Marginal/bad</strong> 55–89, <strong>Poor</strong> 90+.</li></ul></details>`;
+    return `<details class="launchScoreExplanation"><summary>How the launch score is calculated</summary><ul><li><strong>Lower is better.</strong> The score starts at 0 and adds weather penalties for the chosen window.</li><li>Biggest penalties come from rain amount, rain probability, strong 10 m wind, strong gusts, strong winds aloft up to 3000 m, and vertical wind shear from the surface.</li><li>Smaller penalties are added for cloud cover and visibility below 5 km. Rain, snow, fog, and thunderstorm weather codes add extra fixed penalties.</li><li>Wind thresholds before penalties start: about <strong>12 mph</strong> surface wind, <strong>20 mph</strong> gusts, and <strong>25 mph</strong> winds aloft.</li><li>Ratings: <strong>Good</strong> &lt;25, <strong>Usable</strong> 25–54, <strong>Marginal/bad</strong> 55–89, <strong>Poor</strong> 90+.</li><li>The <strong>Main score reasons</strong> column shows the largest penalty contributions for each window, including the number of points each factor adds.</li></ul></details>`;
   }
   function bestRunForDate(candidates, date) { return launchUsableRuns(candidates.filter(c => c.date === date))[0] || null; }
   function launchDayOverviewHtml(candidates, best) {
@@ -1128,12 +1181,12 @@
     let usableRunHtml = `<div class="launchRunBox"><strong>No usable continuous stretch found for the selected settings.</strong><p class="muted small" style="margin:6px 0 0">Every candidate window is already ${LAUNCH_UNUSABLE_SCORE}+ / marginal or worse. All windows are still listed below for comparison.</p></div>`;
     const tableCaption = selectedDate ? "All launch windows for selected day · 09:30–22:00" : "All launch windows across loaded days · 09:30–22:00";
     if (bestRun) {
-      const stopperText = bestRun.stopper ? `The next window, ${escapeHtml(bestRun.stopper.label)}, becomes ${escapeHtml(bestRun.stopper.rating)} (${round(bestRun.stopper.score, 0)}).` : "No bad/unusable score appears before the end of the loaded forecast range.";
+      const stopperText = bestRun.stopper ? `The next window, ${escapeHtml(bestRun.stopper.label)}, becomes ${escapeHtml(bestRun.stopper.rating)} (${round(bestRun.stopper.score, 0)}). Main cause: ${escapeHtml(launchReasonSummary(bestRun.stopper, 2).plain)}.` : "No bad/unusable score appears before the end of the loaded forecast range.";
       const runStart = bestRun.items[0];
       const runEnd = bestRun.items[bestRun.items.length - 1];
       usableRunHtml = `<div class="launchRunBox"><strong>Best continuous usable stretch:</strong><div class="launchBestTime" style="font-size:clamp(1.15rem,2.4vw,1.9rem)">${escapeHtml(bestRun.label)}</div><div class="chips"><span class="chip">Total stretch ${escapeHtml(compactDuration(bestRun.durationMinutes))}</span><span class="chip">Checked as ${escapeHtml(durationLabel)} windows</span><span class="chip">Average score ${round(bestRun.avgScore, 0)}</span><span class="chip">Worst usable score ${round(bestRun.maxScore, 0)}</span><span class="chip">First usable start ${escapeHtml(runStart.label)}</span><span class="chip">Last usable start ${escapeHtml(runEnd.label)}</span></div><p class="muted small" style="margin:10px 0 0">${stopperText}</p></div>`;
     }
-    card.innerHTML = `<div class="launchHeader"><div><h2>MachX launch window</h2><p class="muted small" style="margin:0">${escapeHtml(durationLabel)} launch-window ranking for ${escapeHtml(selectedDateLabel)} · Mach X at Campbeltown Airport · 09:30–22:00</p></div>${launchControlsHtml()}</div><div class="launchBest"><div><span class="chip">Best individual window</span><div class="launchBestTime">${escapeHtml(best.label)}</div><div class="chips"><span class="chip">Launch day ${escapeHtml(launchDayLabel(best.date))}</span><span class="chip">Length ${escapeHtml(durationLabel)}</span><span class="chip">10 m wind avg/max ${round(msToMphNumber(best.surfaceWindAvg), 0)}/${round(msToMphNumber(best.surfaceWindMax), 0)} mph</span><span class="chip">Gust max ${round(msToMphNumber(best.gustMax), 0)} mph</span><span class="chip">Aloft max ${round(msToMphNumber(best.aloftMax), 0)} mph</span><span class="chip">Shear from surface ${round(msToMphNumber(best.shearMax), 0)} mph</span><span class="chip">Rain ${round(best.rainMm, 2)} mm · ${round(best.popMax)}%</span></div></div><div class="launchScoreBox" title="Lower score is better"><span class="muted small">Suitability</span><span class="launchScoreValue">${round(best.score, 0)}</span><strong>${escapeHtml(best.rating)}</strong></div></div>${launchMiniStatsHtml(candidates, bestRun)}${usableRunHtml}<p class="muted small">Weather-ranking helper only. Every complete candidate window is listed in chronological order from 09:30 to 22:00, at 30-minute start intervals. The continuous-stretch summary still identifies where conditions first become bad/unusable. Still use your normal range, NOTAM, airspace, landowner, recovery, and club procedures.</p>${launchScoreExplanationHtml()}${dayOverview}<h3 style="margin-top:14px">${escapeHtml(tableCaption)}</h3><div class="tableWrap"><table><thead><tr><th>Window</th><th>Score</th><th>10 m wind avg/max</th><th>Gust max</th><th>Aloft max</th><th>Shear</th><th>Rain / chance</th><th>Cloud</th><th>Visibility</th></tr></thead><tbody>${allRows}</tbody></table></div>`;
+    card.innerHTML = `<div class="launchHeader"><div><h2>MachX launch window</h2><p class="muted small" style="margin:0">${escapeHtml(durationLabel)} launch-window ranking for ${escapeHtml(selectedDateLabel)} · Mach X at Campbeltown Airport · 09:30–22:00</p></div>${launchControlsHtml()}</div><div class="launchBest"><div><span class="chip">Best individual window</span><div class="launchBestTime">${escapeHtml(best.label)}</div><div class="chips"><span class="chip">Launch day ${escapeHtml(launchDayLabel(best.date))}</span><span class="chip">Length ${escapeHtml(durationLabel)}</span><span class="chip">10 m wind avg/max ${round(msToMphNumber(best.surfaceWindAvg), 0)}/${round(msToMphNumber(best.surfaceWindMax), 0)} mph</span><span class="chip">Gust max ${round(msToMphNumber(best.gustMax), 0)} mph</span><span class="chip">Aloft max ${round(msToMphNumber(best.aloftMax), 0)} mph</span><span class="chip">Shear from surface ${round(msToMphNumber(best.shearMax), 0)} mph</span><span class="chip">Rain ${round(best.rainMm, 2)} mm · ${round(best.popMax)}%</span></div></div><div class="launchScoreBox" title="Lower score is better"><span class="muted small">Suitability</span><span class="launchScoreValue">${round(best.score, 0)}</span><strong>${escapeHtml(best.rating)}</strong></div></div>${launchReasonBoxHtml(best)}${launchMiniStatsHtml(candidates, bestRun)}${usableRunHtml}<p class="muted small">Weather-ranking helper only. Every complete candidate window is listed in chronological order from 09:30 to 22:00, at 30-minute start intervals. The continuous-stretch summary still identifies where conditions first become bad/unusable. Still use your normal range, NOTAM, airspace, landowner, recovery, and club procedures.</p>${launchScoreExplanationHtml()}${dayOverview}<h3 style="margin-top:14px">${escapeHtml(tableCaption)}</h3><div class="tableWrap"><table><thead><tr><th>Window</th><th>Score</th><th>Main score reasons</th><th>10 m wind avg/max</th><th>Gust max</th><th>Aloft max</th><th>Shear</th><th>Rain / chance</th><th>Cloud</th><th>Visibility</th></tr></thead><tbody>${allRows}</tbody></table></div>`;
     bindLaunchWindowControls();
   }
 
