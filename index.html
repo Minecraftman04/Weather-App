@@ -1,3 +1,86 @@
-<!doctype html><html lang="en-GB"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="description" content="Static GitHub Pages weather dashboard with rain nowcast, winds aloft, OpenRocket export, and MachX launch-window helper." /><title>Weather + Winds Aloft</title><link rel="stylesheet" href="style.css"></head><body><div class="wrap"><header class="hero"><section class="heroCopy" aria-label="Dashboard introduction"><span class="kicker">Launch weather briefing</span><h1>Weather + Winds Aloft</h1><p class="subtitle">A GitHub Pages weather dashboard for live surface forecasts, rain timing, sea-level pressure, winds aloft to 3000 m AGL, OpenRocket wind export, and MachX launch-window checks.</p><div class="heroStats" aria-label="Dashboard features"><span class="heroStat">Current + forecast</span><span class="heroStat">15-min rain</span><span class="heroStat">Winds aloft graph</span><span class="heroStat">OpenRocket CSV</span></div></section><section class="searchPanel" aria-label="Location search"><div class="searchGrid"><input id="locationInput" autocomplete="off" placeholder="Bishop's Stortford, Stansted, Snowdon, 51.87,0.16..." /><button id="searchBtn" type="button">Search</button></div><div class="savedLocations" aria-label="Saved locations"><span class="savedLabel">Saved</span><button class="savedLocationBtn" data-saved-name="Hatfield" data-saved-admin2="Hertfordshire" data-saved-admin1="England" data-saved-country="United Kingdom" data-saved-lat="51.7634" data-saved-lon="-0.2242" type="button">Hatfield</button><button class="savedLocationBtn" data-saved-name="Bishop's Stortford" data-saved-admin2="Hertfordshire" data-saved-admin1="England" data-saved-country="United Kingdom" data-saved-lat="51.8719" data-saved-lon="0.1587" type="button">Bishop's Stortford</button><button class="savedLocationBtn" data-saved-name="Machrihanish" data-saved-admin2="Argyll and Bute" data-saved-admin1="Scotland" data-saved-country="United Kingdom" data-saved-lat="55.4234" data-saved-lon="-5.7357" type="button">Machrihanish</button><button class="savedLocationBtn" data-saved-name="Campbeltown Airport" data-saved-admin2="Argyll and Bute" data-saved-admin1="Scotland" data-saved-country="United Kingdom" data-saved-lat="55.4372" data-saved-lon="-5.6864" type="button">Campbeltown Airport</button><button class="savedLocationBtn" data-saved-name="Mach X" data-saved-admin2="Campbeltown Airport" data-saved-admin1="Scotland" data-saved-country="United Kingdom" data-saved-lat="55.4372" data-saved-lon="-5.6864" data-launch-site="machx" type="button">Mach X</button></div><div class="controls"><div class="field"><label for="daysSelect">Forecast</label><select id="daysSelect"><option value="1">1 day</option><option value="3">3 days</option><option value="7" selected>7 days</option><option value="10">10 days</option><option value="15">15 days</option></select></div><div class="field"><label for="windUnitSelect">Wind</label><select id="windUnitSelect"><option value="kt">knots</option><option value="ms">m/s</option><option value="kmh">km/h</option><option value="mph" selected>mph</option></select></div><div class="field"><label for="aloftStepSelect">Aloft step</label><select id="aloftStepSelect"><option value="100">100 m interpolated</option><option value="250">250 m interpolated</option><option value="500">500 m interpolated</option><option value="raw" selected>Raw pressure levels</option></select></div><div class="field"><label>&nbsp;</label><button class="secondary" id="themeBtn" type="button" title="Toggle high-contrast light mode for bright sunlight">Sun mode</button></div><div class="field"><label>&nbsp;</label><button class="secondary" id="gpsBtn" type="button">Use GPS</button></div><div class="field"><label>&nbsp;</label><button id="liveBtn" type="button" title="Use GPS, jump to now, and keep the forecast refreshed">Live weather</button></div></div><div id="geoResults" class="results"></div></section></header><div id="notice" class="notice"></div><main class="dashboardGrid"><section class="overviewGrid" id="overviewGrid" aria-label="Forecast overview"><article class="card" id="currentCard"><h2>Current weather</h2><p class="muted">Search a location to load the forecast.</p></article><article class="card" id="dailyCard"><h2>Daily forecast</h2><p class="muted">Waiting for a location...</p></article></section><section class="mainDataGrid" aria-label="Winds aloft and nowcast"><article class="card" id="aloftCard"><h2>Winds aloft</h2><p class="muted">Waiting for a location...</p></article><article class="card" id="launchWindowCard" hidden><h2>MachX launch window</h2><p class="muted">Select Mach X to calculate launch windows at Campbeltown Airport from 09:30 to 22:00.</p></article><article class="card" id="minuteRainCard"><details class="rainDropdown"><summary><span><span class="rainSummaryTitle">Rain nowcast</span><span class="rainSummarySub">15-minute rain forecast — hidden until opened</span></span></summary><div class="rainDropdownBody"><p class="muted">Waiting for a location...</p></div></details></article></section><article class="card" id="hourlyCard"><h2>Next forecast hours</h2><p class="muted">Waiting for a location...</p></article></main><footer>
-      Data: <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo</a>. Location search: Open-Meteo Geocoding / GeoNames. This page runs fully in the browser and is suitable for GitHub Pages. It is a planning aid only, not a safety or launch-permission product.
-    </footer></div><script src="app.js"></script></body></html>
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Weather + Winds Aloft</title>
+<style>
+html,body{margin:0;min-height:100%;background:#07141c}
+#loading{font-family:system-ui,sans-serif;color:#f4fbff;padding:24px}
+</style>
+</head>
+<body>
+<div id="loading">Loading Weather + Winds Aloft…</div>
+<script>
+(async()=>{
+  try{
+    const cleanPreviousState=()=>{
+      try{
+        const last=JSON.parse(localStorage.getItem("lastLoc")||"null");
+        if(last && last.name==="Campbeltown Airport" && last.launchSite==="machx"){
+          last.launchSite="";
+          localStorage.setItem("lastLoc",JSON.stringify(last));
+        }
+      }catch{}
+      const params=new URLSearchParams(location.search);
+      const name=params.get("name")||"";
+      if(params.get("launchSite")==="machx" && !/^Mach X(?:,|$)/i.test(name)){
+        params.delete("launchSite");
+        history.replaceState(null,"",location.pathname+(params.toString()?"?"+params.toString():""));
+      }
+    };
+    cleanPreviousState();
+
+    const response=await fetch("legacy.html",{cache:"no-store"});
+    if(!response.ok) throw new Error("Could not load the weather app");
+    let html=await response.text();
+
+    html=html.replace(
+      /<button([^>]*data-name="Campbeltown Airport"[^>]*)data-launch="machx"([^>]*)>Campbeltown Airport<\/button>/,
+      '<button$1$2>Campbeltown Airport</button><button data-name="Mach X" data-admin2="Campbeltown Airport" data-admin1="Scotland" data-country="United Kingdom" data-lat="55.4372" data-lon="-5.6864" data-launch="machx">Mach X</button>'
+    );
+
+    html=html.replace("Select Campbeltown Airport.","Select Mach X.");
+
+    const modeCss=`
+      <style>
+      body.machx-only .overview,
+      body.machx-only #current,
+      body.machx-only #daily,
+      body.machx-only #aloft,
+      body.machx-only #rain,
+      body.machx-only #hourly{display:none!important}
+      body.machx-only #launch{display:block!important}
+      </style>
+    `;
+
+    const modeScript=`
+      <script>
+      (()=> {
+        const update=()=>{
+          const params=new URLSearchParams(location.search);
+          const value=document.getElementById("q")?.value||"";
+          const mach=params.get("launchSite")==="machx" || /^Mach X(?:,|$)/i.test(value);
+          document.body.classList.toggle("machx-only",mach);
+        };
+        new MutationObserver(update).observe(document.documentElement,{subtree:true,childList:true,attributes:true});
+        addEventListener("popstate",update);
+        addEventListener("load",update);
+        setInterval(update,500);
+        update();
+      })();
+      <\/script>
+    `;
+
+    html=html.replace("</head>",modeCss+"</head>");
+    html=html.replace("</body>",modeScript+"</body>");
+    document.open();
+    document.write(html);
+    document.close();
+  }catch(error){
+    document.getElementById("loading").textContent="Weather app failed to load: "+error.message;
+  }
+})();
+</script>
+</body>
+</html>
