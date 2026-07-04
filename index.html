@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Static GitHub Pages weather dashboard with rain nowcast, winds aloft, OpenRocket export, and MachX launch-window helper." />
-  <title>Weather + Winds Aloft</title>
+  <meta name="description" content="Static GitHub Pages weather dashboard with rain nowcast and a dedicated MachX launch-weather view." />
+  <title>Weather Dashboard</title>
   <style>
     :root {
       color-scheme: dark;
@@ -401,13 +401,12 @@
     <header class="hero">
       <section class="heroCopy" aria-label="Dashboard introduction">
         <span class="kicker">Launch weather briefing</span>
-        <h1>Weather + Winds Aloft</h1>
-        <p class="subtitle">A GitHub Pages weather dashboard for live surface forecasts, rain timing, sea-level pressure, winds aloft to 3000 m AGL, OpenRocket wind export, and MachX launch-window checks.</p>
+        <h1>Weather Dashboard</h1>
+        <p class="subtitle">A GitHub Pages weather dashboard for live surface forecasts, rain timing, sea-level pressure, and dedicated MachX launch-weather checks.</p>
         <div class="heroStats" aria-label="Dashboard features">
           <span class="heroStat">Current + forecast</span>
           <span class="heroStat">15-min rain</span>
-          <span class="heroStat">Winds aloft graph</span>
-          <span class="heroStat">OpenRocket CSV</span>
+          <span class="heroStat">MachX launch windows</span>
         </div>
       </section>
 
@@ -429,7 +428,7 @@
         <div class="controls">
           <div class="field"><label for="daysSelect">Forecast</label><select id="daysSelect"><option value="1">1 day</option><option value="3">3 days</option><option value="7" selected>7 days</option><option value="10">10 days</option><option value="15">15 days</option></select></div>
           <div class="field"><label for="windUnitSelect">Wind</label><select id="windUnitSelect"><option value="kt">knots</option><option value="ms">m/s</option><option value="kmh">km/h</option><option value="mph" selected>mph</option></select></div>
-          <div class="field"><label for="aloftStepSelect">Aloft step</label><select id="aloftStepSelect"><option value="100">100 m interpolated</option><option value="250">250 m interpolated</option><option value="500">500 m interpolated</option><option value="raw" selected>Raw pressure levels</option></select></div>
+          <div class="field" id="aloftStepField" hidden><label for="aloftStepSelect">Aloft step</label><select id="aloftStepSelect"><option value="100">100 m interpolated</option><option value="250">250 m interpolated</option><option value="500">500 m interpolated</option><option value="raw" selected>Raw pressure levels</option></select></div>
           <div class="field"><label>&nbsp;</label><button class="secondary" id="themeBtn" type="button" title="Toggle high-contrast light mode for bright sunlight">Sun mode</button></div>
           <div class="field"><label>&nbsp;</label><button class="secondary" id="gpsBtn" type="button">Use GPS</button></div>
           <div class="field"><label>&nbsp;</label><button id="liveBtn" type="button" title="Use GPS, jump to now, and keep the forecast refreshed">Live weather</button></div>
@@ -446,8 +445,8 @@
         <article class="card" id="dailyCard"><h2>Daily forecast</h2><p class="muted">Waiting for a location...</p></article>
       </section>
 
-      <section class="mainDataGrid" aria-label="Winds aloft and nowcast">
-        <article class="card" id="aloftCard"><h2>Winds aloft</h2><p class="muted">Waiting for a location...</p></article>
+      <section class="mainDataGrid" aria-label="Forecast details">
+        <article class="card" id="aloftCard" hidden><h2>Winds aloft</h2><p class="muted">Waiting for a location...</p></article>
         <article class="card" id="launchWindowCard" hidden><h2>MachX launch window</h2><p class="muted">Select Mach X to calculate launch windows at Campbeltown Airport from 09:30 to 22:00.</p></article>
         <article class="card" id="minuteRainCard"><details class="rainDropdown"><summary><span><span class="rainSummaryTitle">Rain nowcast</span><span class="rainSummarySub">15-minute rain forecast — hidden until opened</span></span></summary><div class="rainDropdownBody"><p class="muted">Waiting for a location...</p></div></details></article>
       </section>
@@ -481,6 +480,7 @@
     daysSelect: document.getElementById("daysSelect"),
     windUnitSelect: document.getElementById("windUnitSelect"),
     aloftStepSelect: document.getElementById("aloftStepSelect"),
+    aloftStepField: document.getElementById("aloftStepField"),
     geoResults: document.getElementById("geoResults"),
     notice: document.getElementById("notice"),
     overviewGrid: document.getElementById("overviewGrid"),
@@ -664,7 +664,11 @@
     showNotice("Loading forecast...");
     el.geoResults.innerHTML = "";
     try {
-      const [surface, aloftPack] = await Promise.all([fetchJson(surfaceUrl(loc)), loadAloftWithFallback(loc)]);
+      const needsAloft = loc.launchSite === "machx";
+      const [surface, aloftPack] = await Promise.all([
+        fetchJson(surfaceUrl(loc)),
+        needsAloft ? loadAloftWithFallback(loc) : Promise.resolve({ data: null, levels: [], warning: "" })
+      ]);
       state.location = loc;
       state.surface = surface;
       state.aloft = aloftPack.data;
@@ -692,23 +696,24 @@
   }
   function liveUpdateText() { return state.lastLiveUpdate ? `Live mode · refreshed ${state.lastLiveUpdate.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}` : "Live mode on"; }
   function applyLocationMode() {
-    const launchOnly = isMachXLaunchLocation();
-    el.overviewGrid.hidden = launchOnly;
-    el.aloftCard.hidden = launchOnly;
-    el.minuteRainCard.hidden = launchOnly;
-    el.hourlyCard.hidden = launchOnly;
-    el.launchWindowCard.hidden = !launchOnly;
+    const machXMode = isMachXLaunchLocation();
+    el.overviewGrid.hidden = machXMode;
+    el.aloftCard.hidden = !machXMode;
+    el.aloftStepField.hidden = !machXMode;
+    el.minuteRainCard.hidden = machXMode;
+    el.hourlyCard.hidden = machXMode;
+    el.launchWindowCard.hidden = !machXMode;
   }
   function renderAll() {
     applyLocationMode();
     if (isMachXLaunchLocation()) {
+      renderAloft();
       renderLaunchWindow();
       return;
     }
     renderCurrent();
     renderDaily();
     renderMinuteRain();
-    renderAloft();
     renderHourly();
   }
 
