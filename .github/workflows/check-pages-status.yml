@@ -1,0 +1,65 @@
+name: One-shot GitHub Pages status check
+
+on:
+  push:
+    paths:
+      - .github/workflows/check-pages-status.yml
+
+permissions:
+  contents: write
+  pages: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Pages API
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -o /tmp/pages.json -w '%{http_code}' \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/pages")
+
+          python - "$code" <<'PY'
+          import json, pathlib, sys
+          code = int(sys.argv[1])
+          raw = pathlib.Path('/tmp/pages.json').read_text(encoding='utf-8')
+          try:
+              payload = json.loads(raw)
+          except Exception:
+              payload = {'raw': raw}
+          useful = {
+              'http_status': code,
+              'enabled': code == 200,
+              'html_url': payload.get('html_url'),
+              'status': payload.get('status'),
+              'build_type': payload.get('build_type'),
+              'source': payload.get('source'),
+              'protected_domain_state': payload.get('protected_domain_state'),
+              'https_enforced': payload.get('https_enforced'),
+              'message': payload.get('message'),
+          }
+          pathlib.Path('pages-status.json').write_text(json.dumps(useful, indent=2) + '\n', encoding='utf-8')
+          PY
+
+      - name: Trigger static Pages rebuild marker
+        shell: bash
+        run: |
+          touch .nojekyll
+
+      - name: Commit status and remove checker
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pages-status.json .nojekyll
+          git rm .github/workflows/check-pages-status.yml
+          git commit -m "Verify GitHub Pages configuration [skip ci]"
+          git push
