@@ -29,7 +29,12 @@
     }
 
     * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
+    html { scroll-behavior: smooth; max-width: 100%; overflow-x: hidden; }
+    body { max-width: 100%; overflow-x: hidden; }
+    img, svg, canvas { max-width: 100%; }
+    .hero > *, .overviewGrid > *, .mainDataGrid > *, .controls > *, .toolbar > *, .launchBest > *, .launchMiniGrid > * { min-width: 0; }
+    .subtitle, .chip, .notice, .launchBestTime, .launchReasonTag, footer { overflow-wrap: anywhere; }
+
     body {
       margin: 0;
       min-height: 100vh;
@@ -213,7 +218,7 @@
       backdrop-filter: blur(16px);
     }
     .searchPanel { padding: 16px; display: grid; align-content: start; gap: 12px; }
-    .searchGrid { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+    .searchGrid { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
     input, select {
       width: 100%;
       min-height: 45px;
@@ -247,7 +252,7 @@
     }
     button.tiny { padding: 7px 10px; font-size: 0.88rem; }
 
-    .controls { display: grid; grid-template-columns: repeat(6, minmax(120px, 1fr)); gap: 10px; align-items: end; }
+    .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 10px; align-items: end; }
     .field label {
       display: block;
       margin: 0 0 6px 2px;
@@ -259,7 +264,7 @@
     }
 
     .dashboardGrid { display: grid; gap: 18px; }
-    .overviewGrid { display: grid; grid-template-columns: minmax(310px, 0.86fr) minmax(500px, 1.4fr); gap: 18px; align-items: stretch; }
+    .overviewGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); gap: 18px; align-items: stretch; }
     .mainDataGrid { display: grid; grid-template-columns: 1fr; gap: 18px; align-items: start; }
     .card { padding: 18px; min-width: 0; }
     .card h2, .card h3 { margin: 0 0 12px; letter-spacing: -0.035em; }
@@ -303,15 +308,17 @@
     .dayDate { color: var(--muted); font-size: 0.82rem; }
     .dayTemp { font-size: 1.35rem; font-weight: 880; margin: 8px 0 2px; }
 
-    .tableWrap { overflow: auto; border-radius: 16px; border: 1px solid rgba(173, 220, 230, 0.16); background: rgba(0, 0, 0, 0.18); }
+    .tableWrap { width: 100%; max-width: 100%; overflow: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; scrollbar-gutter: stable; border-radius: 16px; border: 1px solid rgba(173, 220, 230, 0.16); background: rgba(0, 0, 0, 0.18); }
     table { width: 100%; border-collapse: collapse; min-width: 760px; }
-    th, td { padding: 10px 11px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.08); white-space: nowrap; }
+    th, td { padding: 10px 11px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.08); white-space: nowrap; max-width: min(420px, 70vw); text-overflow: ellipsis; }
     th { position: sticky; top: 0; background: rgba(7, 20, 28, 0.97); color: var(--accent); z-index: 1; font-size: 0.8rem; letter-spacing: 0.055em; text-transform: uppercase; }
     tr:hover td { background: rgba(34, 211, 238, 0.035); }
 
     .windArrow { display: inline-grid; width: 26px; height: 26px; place-items: center; border: 1px solid var(--border); border-radius: 50%; margin-right: 8px; background: rgba(255, 255, 255, 0.055); transform-origin: center; }
     .bar { display: inline-block; height: 7px; min-width: 3px; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); vertical-align: middle; margin-left: 8px; }
-    .hourlyTable { min-width: 1040px; }
+    .hourlyTable { min-width: 1000px; table-layout: auto; }
+    .hourlyCellValue { min-width: 0; max-width: 100%; }
+    .windCell { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
     .hourlyTime { display: flex; align-items: center; gap: 8px; }
     .dayNightBadge { display: inline-grid; width: 28px; height: 28px; place-items: center; border-radius: 50%; border: 1px solid var(--border); background: rgba(255,255,255,0.055); color: var(--warn); font-size: 1rem; flex: 0 0 auto; }
     .dayNightBadge.night { color: #c4b5fd; background: rgba(139, 92, 246, 0.10); }
@@ -338,14 +345,15 @@
     body.sunMode .weatherIcon.weather-snow,
     body.sunMode .weatherIcon.weather-fog { color: #405b6c; }
     body.sunMode .dayNightBadge.night { color: #5b21b6; }
-    .toolbar { display: grid; grid-template-columns: minmax(260px, 2fr) minmax(180px, 1fr) auto auto; gap: 10px; align-items: end; margin-bottom: 12px; }
+    .toolbar { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr)); gap: 10px; align-items: end; margin-bottom: 12px; }
+    .toolbar button { width: 100%; }
     .toolbar .field { min-width: 0; }
 
     .aloftGraphPanel { margin: 14px 0; padding: 14px; border-radius: 18px; border: 1px solid rgba(173, 220, 230, 0.14); background: rgba(255,255,255,0.035); }
     .graphTop { display: flex; align-items: start; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
     .graphTop strong { display: block; font-size: 1rem; }
     .graphScroll { overflow: auto; border-radius: 16px; border: 1px solid rgba(173, 220, 230, 0.12); background: rgba(0,0,0,0.16); }
-    .aloftSvg { width: 100%; min-width: 720px; height: 390px; display: block; }
+    .aloftSvg { width: 100%; min-width: 0; height: auto; aspect-ratio: 820 / 390; display: block; }
     .graphAxis { stroke: var(--muted-2); stroke-width: 1.2; }
     .graphGrid { stroke: rgba(173, 220, 230, 0.14); stroke-width: 1; }
     .graphLine { fill: none; stroke: var(--accent-2); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
@@ -372,7 +380,7 @@
     #launchWindowCard { grid-column: 1 / -1; }
     .launchHeader { display: flex; align-items: end; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; }
     .launchHeader h2 { margin-bottom: 4px; }
-    .launchControls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; align-items: end; }
+    .launchControls { display: flex; width: 100%; min-width: 0; gap: 10px; flex-wrap: wrap; justify-content: flex-end; align-items: end; }
     .launchDurationControl { min-width: min(230px, 100%); }
     .launchDayControl { min-width: min(270px, 100%); }
     .launchMiniGrid { display: grid; grid-template-columns: repeat(4, minmax(140px, 1fr)); gap: 10px; margin: 12px 0; }
@@ -380,9 +388,9 @@
     .launchRunBox, .launchScoreExplanation { margin: 12px 0; }
     .launchMiniStat span { display: block; color: var(--muted); font-size: 0.78rem; font-weight: 760; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
     .launchMiniStat strong { display: block; color: var(--text); font-size: 1.15rem; line-height: 1.15; }
-    .launchBest { display: grid; grid-template-columns: minmax(240px, 1fr) minmax(190px, auto); gap: 12px; align-items: stretch; padding: 14px; border: 1px solid rgba(52, 211, 153, 0.30); border-radius: 18px; background: linear-gradient(135deg, rgba(52, 211, 153, 0.13), rgba(34, 211, 238, 0.08)), rgba(255,255,255,0.035); margin-bottom: 12px; }
+    .launchBest { display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, auto); gap: 12px; align-items: stretch; padding: 14px; border: 1px solid rgba(52, 211, 153, 0.30); border-radius: 18px; background: linear-gradient(135deg, rgba(52, 211, 153, 0.13), rgba(34, 211, 238, 0.08)), rgba(255,255,255,0.035); margin-bottom: 12px; }
     .launchBestTime { font-size: clamp(1.35rem, 3vw, 2.35rem); line-height: 1.02; letter-spacing: -0.055em; font-weight: 930; margin: 3px 0 8px; }
-    .launchScoreBox { display: grid; place-items: center; text-align: center; min-width: 156px; padding: 12px; border-radius: 16px; border: 1px solid rgba(173, 220, 230, 0.16); background: rgba(0, 0, 0, 0.16); }
+    .launchScoreBox { display: grid; place-items: center; text-align: center; min-width: 0; padding: 12px; border-radius: 16px; border: 1px solid rgba(173, 220, 230, 0.16); background: rgba(0, 0, 0, 0.16); }
     .launchScoreValue { font-size: 2.2rem; line-height: 1; font-weight: 920; letter-spacing: -0.06em; }
     .bestLaunchRow td { background: rgba(52, 211, 153, 0.10); color: var(--text); }
     .badLaunchRow td { background: rgba(248, 113, 113, 0.12); color: var(--text); border-top: 1px solid rgba(248, 113, 113, 0.28); }
@@ -393,7 +401,7 @@
     .launchReasonList { display: flex; flex-wrap: wrap; gap: 7px; }
     .launchReasonTag { display: inline-flex; align-items: center; gap: 5px; padding: 5px 8px; border: 1px solid rgba(251, 191, 36, 0.24); border-radius: 999px; background: rgba(251, 191, 36, 0.08); color: var(--text); font-size: 0.84rem; line-height: 1.25; }
     .launchReasonTag b { color: var(--warn); }
-    .scoreReasons { min-width: 230px; max-width: 330px; white-space: normal; line-height: 1.35; }
+    .scoreReasons { min-width: 0; width: min(330px, 70vw); max-width: 330px; white-space: normal; line-height: 1.35; overflow-wrap: anywhere; }
     .scoreReasonLine { display: block; margin: 2px 0; }
     .scoreReasonLine strong { color: var(--text); }
     .scoreReasonPenalty { color: var(--warn); font-weight: 850; white-space: nowrap; }
@@ -403,23 +411,69 @@
     footer { color: var(--muted-2); font-size: 0.86rem; margin-top: 24px; line-height: 1.55; padding: 0 4px; }
 
     @media (max-width: 1120px) {
-      .hero, .overviewGrid { grid-template-columns: 1fr; }
-      .controls { grid-template-columns: repeat(3, minmax(120px, 1fr)); }
+      .hero { grid-template-columns: 1fr; }
+      .heroCopy { min-height: auto; }
     }
     @media (max-width: 900px) {
-      .launchMiniGrid { grid-template-columns: repeat(2, minmax(140px, 1fr)); }
+      .launchMiniGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .launchControls { justify-content: stretch; }
-      .launchControls .field { flex: 1 1 220px; }
+      .launchControls .field { flex: 1 1 min(220px, 100%); min-width: 0; }
+      .launchBest { grid-template-columns: minmax(0, 1fr); }
+      .launchScoreBox { place-items: start; text-align: left; }
     }
     @media (max-width: 760px) {
       .wrap { width: min(100% - 18px, 1420px); padding-top: 12px; }
-      .searchGrid, .controls, .toolbar { grid-template-columns: 1fr; }
+      .searchGrid, .toolbar { grid-template-columns: minmax(0, 1fr); }
+      .controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .heroCopy, .searchPanel, .card { border-radius: 19px; }
-      h1 { max-width: 100%; }
-      .launchBest { grid-template-columns: 1fr; }
-      .launchScoreBox { place-items: start; text-align: left; }
-      .launchMiniGrid { grid-template-columns: 1fr; }
-      table { min-width: 720px; }
+      h1 { max-width: 100%; font-size: clamp(2rem, 12vw, 3.8rem); }
+      .launchMiniGrid { grid-template-columns: minmax(0, 1fr); }
+      .launchDurationControl, .launchDayControl { min-width: 0; width: 100%; }
+      .launchControls .field { flex-basis: 100%; }
+      .graphScroll { overflow: hidden; }
+      .aloftGraphPanel { padding: 10px; }
+      .aloftSvg { min-height: 230px; }
+      table:not(.hourlyTable) { min-width: 680px; }
+
+      #hourlyCard { padding: 14px; }
+      #hourlyCard .tableWrap { overflow: visible; border: 0; background: transparent; scrollbar-gutter: auto; }
+      .hourlyTable, .hourlyTable tbody { display: block; width: 100%; min-width: 0; }
+      .hourlyTable thead { display: none; }
+      .hourlyTable tbody { display: grid; gap: 10px; }
+      .hourlyTable tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: hidden; border: 1px solid var(--border); border-radius: 16px; background: rgba(255,255,255,0.035); }
+      .hourlyTable td { display: block; min-width: 0; max-width: none; padding: 10px; white-space: normal; overflow-wrap: anywhere; text-overflow: clip; }
+      .hourlyTable td::before { content: attr(data-label); display: block; margin-bottom: 6px; color: var(--muted); font-size: 0.72rem; font-weight: 850; letter-spacing: 0.07em; text-transform: uppercase; }
+      .hourlyTable td:nth-last-child(-n+2) { border-bottom: 0; }
+      .hourlyWeather { min-width: 0; align-items: flex-start; }
+      .metricVisual { min-width: 0; }
+      .windCell .bar { max-width: 100%; }
+      .visibilityQuality { margin: 4px 0 0; }
+    }
+    @media (max-width: 520px) {
+      .wrap { width: calc(100% - 12px); padding-bottom: 24px; }
+      .hero { gap: 10px; margin-bottom: 10px; }
+      .heroCopy, .searchPanel, .card { padding: 14px; border-radius: 16px; }
+      .searchPanel { gap: 10px; }
+      .controls { grid-template-columns: minmax(0, 1fr); }
+      .searchGrid button, .controls button, .toolbar button, .launchControls button { width: 100%; white-space: normal; }
+      .savedLocations { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .savedLabel { grid-column: 1 / -1; }
+      .savedLocationBtn { width: 100%; min-width: 0; white-space: normal; }
+      .heroStats { display: grid; grid-template-columns: minmax(0, 1fr); }
+      .heroStat { text-align: center; }
+      .chips { align-items: stretch; }
+      .chip { max-width: 100%; white-space: normal; }
+      .rainDropdown > summary { align-items: flex-start; flex-wrap: wrap; padding: 14px; }
+      .rainDropdown > summary::after { margin-left: auto; }
+      .rainDropdownBody { padding: 0 12px 12px; }
+      .hourlyTable tr { grid-template-columns: minmax(0, 1fr); }
+      .hourlyTable td { border-bottom: 1px solid rgba(255,255,255,0.08); }
+      .hourlyTable td:last-child { border-bottom: 0; }
+      .weatherIcon { width: 42px; height: 42px; }
+      .weatherIcon svg { width: 34px; height: 34px; }
+      .launchHeader { align-items: stretch; }
+      .launchScoreValue { font-size: 1.9rem; }
+      footer { padding: 0; }
     }
   </style>
 </head>
@@ -1262,7 +1316,7 @@
       const rainAmount = Number(h.precipitation?.[i] || 0);
       const cloudCover = Math.max(0, Math.min(100, Number(h.cloud_cover?.[i] || 0)));
       const visibilityKm = h.visibility?.[i] != null ? Number(h.visibility[i]) / 1000 : null;
-      return `<tr><td><div class="hourlyTime"><span class="dayNightBadge ${isDay ? "day" : "night"}" title="${isDay ? "Daytime" : "Night-time"}" aria-label="${isDay ? "Daytime" : "Night-time"}">${isDay ? "☀" : "☾"}</span><strong>${formatLocal(time)}</strong></div></td><td><strong>${round(h.temperature_2m?.[i])}°C</strong><div class="muted small">Feels ${round(h.apparent_temperature?.[i])}°C</div></td><td><div class="hourlyWeather">${weatherIconSvg(code, isDay)}<div class="weatherLabel"><strong>${escapeHtml(weatherText(code))}</strong><span>${isDay ? "Daytime" : "Night-time"}</span></div></div></td><td><div class="metricVisual"><div class="metricVisualTop"><strong>${round(rainProbability)}%</strong><span class="muted small">${round(rainAmount, 1)} mm</span></div><span class="miniMeter rainMeter" style="--meter:${rainProbability}%" aria-label="${round(rainProbability)} percent chance of rain"><span></span></span></div></td><td><span class="windArrow" style="transform: rotate(${Number(h.wind_direction_10m?.[i] || 0)}deg)">↓</span>${wind.value} ${wind.unit} ${dirText(h.wind_direction_10m?.[i])}<span class="bar" style="width:${barWidth}px"></span></td><td>${gust.value} ${gust.unit}</td><td><div class="metricVisual"><div class="metricVisualTop"><strong>${round(cloudCover)}%</strong></div><span class="miniMeter cloudMeter" style="--meter:${cloudCover}%" aria-label="${round(cloudCover)} percent cloud cover"><span></span></span></div></td><td>${finite(visibilityKm) ? `${round(visibilityKm, 1)} km<span class="visibilityQuality">${visibilityQuality(visibilityKm)}</span>` : "—"}</td></tr>`;
+      return `<tr><td data-label="Time"><div class="hourlyCellValue hourlyTime"><span class="dayNightBadge ${isDay ? "day" : "night"}" title="${isDay ? "Daytime" : "Night-time"}" aria-label="${isDay ? "Daytime" : "Night-time"}">${isDay ? "☀" : "☾"}</span><strong>${formatLocal(time)}</strong></div></td><td data-label="Temperature"><div class="hourlyCellValue"><strong>${round(h.temperature_2m?.[i])}°C</strong><div class="muted small">Feels ${round(h.apparent_temperature?.[i])}°C</div></div></td><td data-label="Weather"><div class="hourlyCellValue hourlyWeather">${weatherIconSvg(code, isDay)}<div class="weatherLabel"><strong>${escapeHtml(weatherText(code))}</strong><span>${isDay ? "Daytime" : "Night-time"}</span></div></div></td><td data-label="Rain"><div class="hourlyCellValue metricVisual"><div class="metricVisualTop"><strong>${round(rainProbability)}%</strong><span class="muted small">${round(rainAmount, 1)} mm</span></div><span class="miniMeter rainMeter" style="--meter:${rainProbability}%" aria-label="${round(rainProbability)} percent chance of rain"><span></span></span></div></td><td data-label="10 m wind"><div class="hourlyCellValue windCell"><span class="windArrow" style="transform: rotate(${Number(h.wind_direction_10m?.[i] || 0)}deg)">↓</span><span>${wind.value} ${wind.unit} ${dirText(h.wind_direction_10m?.[i])}</span><span class="bar" style="width:${barWidth}px"></span></div></td><td data-label="Gust"><div class="hourlyCellValue">${gust.value} ${gust.unit}</div></td><td data-label="Cloud"><div class="hourlyCellValue metricVisual"><div class="metricVisualTop"><strong>${round(cloudCover)}%</strong></div><span class="miniMeter cloudMeter" style="--meter:${cloudCover}%" aria-label="${round(cloudCover)} percent cloud cover"><span></span></span></div></td><td data-label="Visibility"><div class="hourlyCellValue">${finite(visibilityKm) ? `${round(visibilityKm, 1)} km<span class="visibilityQuality">${visibilityQuality(visibilityKm)}</span>` : "—"}</div></td></tr>`;
     }).join("");
     el.hourlyCard.innerHTML = `<h2>Next forecast hours</h2><p class="muted small" style="margin:-5px 0 12px">Weather icons, daylight, rain chance, cloud cover, wind direction and visibility for the next 36 forecast hours.</p><div class="tableWrap"><table class="hourlyTable"><thead><tr><th>Time</th><th>Temperature</th><th>Weather</th><th>Rain</th><th>10 m wind</th><th>Gust</th><th>Cloud</th><th>Visibility</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   }
