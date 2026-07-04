@@ -1,0 +1,55 @@
+name: Verify hourly visuals Pages deployment
+
+on:
+  push:
+    paths:
+      - .github/workflows/verify-hourly-visuals-pages.yml
+
+permissions:
+  deployments: read
+  issues: write
+  pages: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check exact Pages deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: 93e11da4a6183dd4e5bbe082f03519b1c5dcdf0a
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}"
+          auth=(-H "Accept: application/vnd.github+json" -H "Authorization: Bearer ${GH_TOKEN}" -H "X-GitHub-Api-Version: 2022-11-28")
+          site='{}'; build='{}'; deployment_state='not-found'; deployment_id=''
+          for attempt in $(seq 1 36); do
+            site=$(curl -fsS "${auth[@]}" "${api}/pages")
+            build=$(curl -fsS "${auth[@]}" "${api}/pages/builds/latest")
+            build_sha=$(jq -r '.commit // ""' <<<"$build")
+            build_status=$(jq -r '.status // "unknown"' <<<"$build")
+            deployments=$(curl -fsS "${auth[@]}" "${api}/deployments?environment=github-pages&per_page=20")
+            deployment_id=$(jq -r --arg sha "$TARGET_SHA" '[.[] | select(.sha == $sha)][0].id // empty' <<<"$deployments")
+            if [ -n "$deployment_id" ]; then
+              statuses=$(curl -fsS "${auth[@]}" "${api}/deployments/${deployment_id}/statuses?per_page=20")
+              deployment_state=$(jq -r '.[0].state // "unknown"' <<<"$statuses")
+            fi
+            if [ "$build_sha" = "$TARGET_SHA" ] && [ "$build_status" = "built" ] && [ "$deployment_state" = "success" ]; then break; fi
+            sleep 5
+          done
+          body=$(cat <<EOF
+          Hourly forecast visuals deployment verification.
+
+          - Target commit: ${TARGET_SHA}
+          - Pages URL: $(jq -r '.html_url // "unknown"' <<<"$site")
+          - Pages source: $(jq -r '.source.branch // "unknown"' <<<"$site")$(jq -r '.source.path // ""' <<<"$site")
+          - Site status: $(jq -r '.status // "unknown"' <<<"$site")
+          - Latest build commit: $(jq -r '.commit // "unknown"' <<<"$build")
+          - Latest build status: $(jq -r '.status // "unknown"' <<<"$build")
+          - Build error: $(jq -r '.error.message // "none"' <<<"$build")
+          - Deployment ID: ${deployment_id:-not found}
+          - Deployment status: ${deployment_state}
+          EOF
+          )
+          curl -fsS -X POST "${auth[@]}" "${api}/issues" -d "$(jq -n --arg title 'Temporary hourly visuals Pages verification' --arg body "$body" '{title:$title,body:$body}')" >/dev/null
