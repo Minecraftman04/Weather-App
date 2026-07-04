@@ -1,4 +1,4 @@
-name: Verify wide-screen GitHub Pages deployment
+name: Verify saved-location GitHub Pages deployment
 
 on:
   push:
@@ -50,7 +50,7 @@ jobs:
           done
 
           body=$(cat <<EOF
-          Wide-screen GitHub Pages deployment verification.
+          Saved-location GitHub Pages deployment verification.
 
           - Commit: ${GITHUB_SHA}
           - Pages URL: $(jq -r '.html_url // "unknown"' <<<"$site")
@@ -65,5 +65,5 @@ jobs:
           - Deployment log: $(jq -r '.log_url // "none"' <<<"$latest")
           EOF
           )
-          payload=$(jq -n --arg title 'Wide-screen Pages deployment verification' --arg body "$body" '{title:$title,body:$body}')
+          payload=$(jq -n --arg title 'Saved-location Pages deployment verification' --arg body "$body" '{title:$title,body:$body}')
           curl -fsS -X POST "${headers[@]}" "$api/issues" -d "$payload" >/dev/null
