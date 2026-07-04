@@ -1,0 +1,60 @@
+name: Write current Pages deployment status
+
+on:
+  push:
+    paths:
+      - .github/workflows/write-pages-status.yml
+
+permissions:
+  contents: write
+  deployments: read
+  pages: read
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Query GitHub Pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: 0c82974384c9df6529c0efc490f47464f79e9922
+        shell: bash
+        run: |
+          set -euo pipefail
+          sleep 20
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}"
+          headers=(-H "Accept: application/vnd.github+json" -H "Authorization: Bearer ${GH_TOKEN}" -H "X-GitHub-Api-Version: 2022-11-28")
+          site=$(curl -fsS "${headers[@]}" "$api/pages")
+          build=$(curl -fsS "${headers[@]}" "$api/pages/builds/latest")
+          deployments=$(curl -fsS "${headers[@]}" "$api/deployments?environment=github-pages&per_page=30")
+          deployment_id=$(jq -r --arg sha "$TARGET_SHA" '[.[] | select(.sha == $sha)][0].id // empty' <<<"$deployments")
+          deployment_state="not-found"
+          if [ -n "$deployment_id" ]; then
+            statuses=$(curl -fsS "${headers[@]}" "$api/deployments/$deployment_id/statuses?per_page=20")
+            deployment_state=$(jq -r '.[0].state // "unknown"' <<<"$statuses")
+          fi
+          jq -n \
+            --arg target_commit "$TARGET_SHA" \
+            --arg pages_url "$(jq -r '.html_url // "unknown"' <<<"$site")" \
+            --arg source_branch "$(jq -r '.source.branch // "unknown"' <<<"$site")" \
+            --arg source_path "$(jq -r '.source.path // "unknown"' <<<"$site")" \
+            --arg site_status "$(jq -r '.status // "unknown"' <<<"$site")" \
+            --arg latest_build_commit "$(jq -r '.commit // "unknown"' <<<"$build")" \
+            --arg latest_build_status "$(jq -r '.status // "unknown"' <<<"$build")" \
+            --arg build_error "$(jq -r '.error.message // "none"' <<<"$build")" \
+            --arg deployment_id "${deployment_id:-not found}" \
+            --arg deployment_status "$deployment_state" \
+            '{target_commit:$target_commit,pages_url:$pages_url,source:{branch:$source_branch,path:$source_path},site_status:$site_status,latest_build_commit:$latest_build_commit,latest_build_status:$latest_build_status,build_error:$build_error,target_deployment_id:$deployment_id,target_deployment_status:$deployment_status}' > pages-current-status.json
+
+      - name: Commit report
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pages-current-status.json
+          git commit -m "Report current GitHub Pages deployment [skip ci]"
+          git push
