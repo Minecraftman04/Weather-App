@@ -1,0 +1,44 @@
+name: Verify Pages deployment 0c829743
+
+on:
+  push:
+    paths:
+      - .github/workflows/verify-pages-0c829743.yml
+
+permissions:
+  deployments: read
+  issues: write
+  pages: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: 0c82974384c9df6529c0efc490f47464f79e9922
+        run: |
+          sleep 25
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}"
+          h1="Accept: application/vnd.github+json"
+          h2="Authorization: Bearer ${GH_TOKEN}"
+          h3="X-GitHub-Api-Version: 2022-11-28"
+          site=$(curl -fsS -H "$h1" -H "$h2" -H "$h3" "$api/pages")
+          build=$(curl -fsS -H "$h1" -H "$h2" -H "$h3" "$api/pages/builds/latest")
+          deployments=$(curl -fsS -H "$h1" -H "$h2" -H "$h3" "$api/deployments?environment=github-pages&per_page=20")
+          id=$(printf '%s' "$deployments" | jq -r --arg sha "$TARGET_SHA" '[.[] | select(.sha == $sha)][0].id // empty')
+          state="not-found"
+          if [ -n "$id" ]; then
+            statuses=$(curl -fsS -H "$h1" -H "$h2" -H "$h3" "$api/deployments/$id/statuses?per_page=20")
+            state=$(printf '%s' "$statuses" | jq -r '.[0].state // "unknown"')
+          fi
+          body="Target commit: $TARGET_SHA
+Pages URL: $(printf '%s' "$site" | jq -r '.html_url')
+Site status: $(printf '%s' "$site" | jq -r '.status')
+Latest build commit: $(printf '%s' "$build" | jq -r '.commit')
+Latest build status: $(printf '%s' "$build" | jq -r '.status')
+Build error: $(printf '%s' "$build" | jq -r '.error.message // "none"')
+Deployment status: $state"
+          payload=$(jq -n --arg title 'Temporary Pages verification 0c829743' --arg body "$body" '{title:$title,body:$body}')
+          curl -fsS -X POST -H "$h1" -H "$h2" -H "$h3" "$api/issues" -d "$payload" >/dev/null
