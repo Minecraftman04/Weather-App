@@ -1,0 +1,52 @@
+name: Apply responsive layout update
+
+on:
+  push:
+    paths:
+      - .github/workflows/apply-responsive-layout.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply responsive layout patch
+        run: python tools/apply-responsive-layout.py
+
+      - name: Validate application
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          text = Path('index.html').read_text(encoding='utf-8')
+          required = [
+              'data-label="Time"',
+              '.hourlyTable td::before',
+              'grid-template-columns: repeat(2, minmax(0, 1fr))',
+              'html { scroll-behavior: smooth; max-width: 100%; overflow-x: hidden; }',
+              '.aloftSvg { width: 100%; min-width: 0;',
+          ]
+          for item in required:
+              assert item in text, item
+
+          script = re.search(r'<script>\s*(.*?)\s*</script>', text, re.S)
+          assert script
+          Path('/tmp/weather-app.js').write_text(script.group(1), encoding='utf-8')
+          PY
+          node --check /tmp/weather-app.js
+
+      - name: Commit update and remove temporary files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git rm tools/apply-responsive-layout.py .github/workflows/apply-responsive-layout.yml
+          git commit -m "Make weather dashboard fully responsive"
+          git push
