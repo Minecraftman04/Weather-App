@@ -1,0 +1,14 @@
+{
+  "target_commit": "0c82974384c9df6529c0efc490f47464f79e9922",
+  "pages_url": "https://minecraftman04.github.io/Weather-App/",
+  "source": {
+    "branch": "main",
+    "path": "/"
+  },
+  "site_status": "errored",
+  "latest_build_commit": "36eac6f703ad2fdddfc4b78abc424cb313d12c69",
+  "latest_build_status": "building",
+  "build_error": "none",
+  "target_deployment_id": "5314008161",
+  "target_deployment_status": "failure"
+}
