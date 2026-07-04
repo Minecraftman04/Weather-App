@@ -1,0 +1,41 @@
+name: Verify responsive Pages deployment
+
+on:
+  push:
+    paths:
+      - .github/workflows/verify-responsive-pages.yml
+
+permissions:
+  deployments: read
+  issues: write
+  pages: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: 349652332753e5061ed91b2d906cfdf092b16c17
+        run: |
+          sleep 20
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}"
+          auth=(-H "Accept: application/vnd.github+json" -H "Authorization: Bearer ${GH_TOKEN}" -H "X-GitHub-Api-Version: 2022-11-28")
+          site=$(curl -fsS "${auth[@]}" "${api}/pages")
+          build=$(curl -fsS "${auth[@]}" "${api}/pages/builds/latest")
+          deployments=$(curl -fsS "${auth[@]}" "${api}/deployments?environment=github-pages&per_page=20")
+          id=$(jq -r --arg sha "$TARGET_SHA" '[.[] | select(.sha == $sha)][0].id // empty' <<<"$deployments")
+          state="not-found"
+          if [ -n "$id" ]; then
+            statuses=$(curl -fsS "${auth[@]}" "${api}/deployments/${id}/statuses?per_page=20")
+            state=$(jq -r '.[0].state // "unknown"' <<<"$statuses")
+          fi
+          body="Target commit: ${TARGET_SHA}
+Pages URL: $(jq -r '.html_url' <<<"$site")
+Site status: $(jq -r '.status' <<<"$site")
+Latest build commit: $(jq -r '.commit' <<<"$build")
+Latest build status: $(jq -r '.status' <<<"$build")
+Build error: $(jq -r '.error.message // "none"' <<<"$build")
+Deployment status: ${state}"
+          curl -fsS -X POST "${auth[@]}" "${api}/issues" -d "$(jq -n --arg title 'Temporary responsive Pages verification' --arg body "$body" '{title:$title,body:$body}')" >/dev/null
