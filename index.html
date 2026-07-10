@@ -1,9 +1,19 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en-GB">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Static GitHub Pages weather dashboard with rain nowcast and a dedicated MachX launch-weather view." />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A fast, privacy-friendly weather dashboard with local forecasts, rain timing, winds aloft, and dedicated MachX launch-weather planning.">
+  <meta name="theme-color" id="themeColor" content="#06131a">
+  <meta name="color-scheme" content="dark light">
+  <meta name="application-name" content="Weather Dashboard">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta property="og:title" content="Weather Dashboard">
+  <meta property="og:description" content="Local forecasts, rain timing, winds aloft, and MachX launch-weather planning in one responsive dashboard.">
+  <meta property="og:type" content="website">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
   <title>Weather Dashboard</title>
   <style>
     :root {
@@ -34,6 +44,31 @@
     img, svg, canvas { max-width: 100%; }
     .hero > *, .overviewGrid > *, .mainDataGrid > *, .controls > *, .toolbar > *, .launchBest > *, .launchMiniGrid > * { min-width: 0; }
     .subtitle, .chip, .notice, .launchBestTime, .launchReasonTag, footer { overflow-wrap: anywhere; }
+    .srOnly {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+    .skipLink {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      z-index: 100;
+      padding: 10px 14px;
+      border-radius: 12px;
+      color: #041017;
+      background: var(--accent);
+      font-weight: 850;
+      transform: translateY(-160%);
+      transition: transform 140ms ease;
+    }
+    .skipLink:focus { transform: translateY(0); }
 
     body {
       margin: 0;
@@ -94,6 +129,7 @@
     body.sunMode .heroStat,
     body.sunMode .savedLocations,
     body.sunMode .dayCard,
+    body.sunMode .currentMetric,
     body.sunMode .launchRunBox,
     body.sunMode .launchScoreExplanation,
     body.sunMode .launchMiniStat,
@@ -101,6 +137,10 @@
       background: rgba(9, 56, 90, 0.055);
       border-color: rgba(20, 72, 105, 0.16);
       color: var(--text);
+    }
+    body.sunMode .currentHero {
+      background: linear-gradient(135deg, rgba(0, 107, 182, 0.08), rgba(0, 138, 122, 0.05));
+      border-color: rgba(0, 107, 182, 0.22);
     }
     body.sunMode input,
     body.sunMode select {
@@ -146,6 +186,8 @@
 
     a { color: var(--accent); }
     button, input, select { font: inherit; }
+    :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+    input:focus-visible, select:focus-visible { outline: 0; }
 
     .wrap {
       width: min(1800px, calc(100% - 28px));
@@ -199,7 +241,7 @@
       font-size: 1rem;
       line-height: 1.58;
     }
-    .heroStats { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+    .heroStats { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 0; padding: 0; list-style: none; }
     .heroStat {
       padding: 8px 11px;
       border: 1px solid rgba(173, 220, 230, 0.16);
@@ -219,6 +261,7 @@
     }
     .searchPanel { padding: 16px; display: grid; align-content: start; gap: 12px; }
     .searchGrid { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
+    .searchHint { margin: -4px 2px 0; color: var(--muted-2); font-size: 0.78rem; line-height: 1.35; }
     input, select {
       width: 100%;
       min-height: 45px;
@@ -238,12 +281,14 @@
       color: #041017;
       cursor: pointer;
       font-weight: 850;
-      transition: transform 120ms ease, opacity 120ms ease, border-color 120ms ease;
+      transition: transform 120ms ease, opacity 120ms ease, border-color 120ms ease, background 120ms ease;
       white-space: nowrap;
       box-shadow: 0 11px 28px rgba(34, 211, 238, 0.12);
     }
     button:hover { transform: translateY(-1px); }
-    button:disabled { cursor: wait; opacity: 0.62; transform: none; }
+    button:active { transform: translateY(0); }
+    button:disabled { cursor: not-allowed; opacity: 0.62; transform: none; }
+    [aria-busy="true"] button:disabled { cursor: wait; }
     button.secondary {
       background: rgba(255,255,255,0.055);
       color: var(--text);
@@ -293,6 +338,9 @@
     .savedLocations { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px; border-radius: 16px; background: rgba(255,255,255,0.045); border: 1px solid rgba(173, 220, 230, 0.11); }
     .savedLabel { color: var(--muted); font-size: 0.76rem; font-weight: 850; text-transform: uppercase; letter-spacing: 0.08em; margin-right: 2px; }
     .savedLocationBtn, .resultBtn { padding: 8px 11px; font-size: 0.86rem; color: var(--text); background: rgba(34, 211, 238, 0.08); border: 1px solid rgba(34, 211, 238, 0.28); box-shadow: none; }
+    .savedLocationBtn.userSaved::before { content: "★"; margin-right: 5px; color: var(--warn); }
+    .locationActions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .locationActions button { flex: 1 1 130px; }
     .resultBtn { display: block; width: 100%; text-align: left; }
     .results { display: grid; gap: 8px; }
     .notice { padding: 13px 15px; color: var(--text); margin: 0 0 18px; display: none; }
@@ -303,10 +351,37 @@
     body.sunMode .notice.warn { color: #6c4300; background: #fff8e6; }
 
     .dailyGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
-    .dayCard { background: rgba(255, 255, 255, 0.052); border: 1px solid rgba(173, 220, 230, 0.13); border-radius: 16px; padding: 12px; min-height: 126px; }
+    .dayCard { background: rgba(255, 255, 255, 0.052); border: 1px solid rgba(173, 220, 230, 0.13); border-radius: 16px; padding: 12px; min-height: 126px; scroll-snap-align: start; }
     .dayTop { display:flex; justify-content: space-between; gap: 8px; align-items: center; }
     .dayDate { color: var(--muted); font-size: 0.82rem; }
     .dayTemp { font-size: 1.35rem; font-weight: 880; margin: 8px 0 2px; }
+    .dayWeather { display: flex; gap: 9px; align-items: center; margin: 10px 0 7px; }
+    .dayWeather .weatherIcon { width: 38px; height: 38px; border-radius: 12px; }
+    .dayWeather .weatherIcon svg { width: 31px; height: 31px; }
+    .dayWeatherText { min-width: 0; color: var(--muted); font-size: 0.82rem; line-height: 1.25; }
+    .dayRain { margin: 9px 0 8px; }
+
+    .currentHero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+      padding: 15px;
+      border: 1px solid rgba(34, 211, 238, 0.20);
+      border-radius: 19px;
+      background: linear-gradient(135deg, rgba(34, 211, 238, 0.10), rgba(52, 211, 153, 0.055));
+    }
+    .currentCondition { display: flex; align-items: center; gap: 13px; min-width: 0; }
+    .currentCondition .weatherIcon { width: 76px; height: 76px; border-radius: 22px; }
+    .currentCondition .weatherIcon svg { width: 62px; height: 62px; }
+    .currentTemp { margin: 0; font-size: clamp(2.7rem, 7vw, 4.8rem); line-height: 0.9; font-weight: 920; letter-spacing: -0.075em; }
+    .currentSummary { margin: 7px 0 0; color: var(--muted); line-height: 1.4; }
+    .currentTime { text-align: right; color: var(--muted); font-size: 0.84rem; line-height: 1.45; }
+    .currentMetrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; margin-top: 11px; }
+    .currentMetric { min-width: 0; padding: 11px; border: 1px solid rgba(173, 220, 230, 0.13); border-radius: 15px; background: rgba(255,255,255,0.04); }
+    .currentMetric span { display: block; margin-bottom: 4px; color: var(--muted); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+    .currentMetric strong { display: block; overflow-wrap: anywhere; font-size: 0.95rem; line-height: 1.3; }
+    .currentFooter { margin: 10px 2px 0; color: var(--muted); font-size: 0.82rem; line-height: 1.4; }
 
     .tableWrap { width: 100%; max-width: 100%; overflow: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; scrollbar-gutter: stable; border-radius: 16px; border: 1px solid rgba(173, 220, 230, 0.16); background: rgba(0, 0, 0, 0.18); }
     table { width: 100%; border-collapse: collapse; min-width: 760px; }
@@ -471,6 +546,7 @@
       .aloftGraphPanel { padding: 10px; }
       .aloftSvg { min-height: 230px; }
       table:not(.hourlyTable) { min-width: 680px; }
+      .currentMetrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
       #hourlyCard { padding: 14px; }
       #hourlyCard .tableWrap { overflow: visible; border: 0; background: transparent; scrollbar-gutter: auto; }
@@ -496,6 +572,8 @@
       .savedLocations { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .savedLabel { grid-column: 1 / -1; }
       .savedLocationBtn { width: 100%; min-width: 0; white-space: normal; }
+      .locationActions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .locationActions button { width: 100%; min-width: 0; white-space: normal; }
       .heroStats { display: grid; grid-template-columns: minmax(0, 1fr); }
       .heroStat { text-align: center; }
       .chips { align-items: stretch; }
@@ -508,37 +586,57 @@
       .hourlyTable td:last-child { border-bottom: 0; }
       .weatherIcon { width: 42px; height: 42px; }
       .weatherIcon svg { width: 34px; height: 34px; }
+      .currentHero { grid-template-columns: minmax(0, 1fr); padding: 12px; }
+      .currentTime { text-align: left; }
+      .currentCondition .weatherIcon { width: 62px; height: 62px; border-radius: 18px; }
+      .currentCondition .weatherIcon svg { width: 50px; height: 50px; }
+      .currentMetrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .dailyGrid { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(168px, 78vw); grid-template-columns: none; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; padding-bottom: 7px; }
       .launchHeader { align-items: stretch; }
       .launchScoreValue { font-size: 1.9rem; }
       footer { padding: 0; }
     }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+    }
   </style>
 </head>
 <body>
+  <a class="skipLink" href="#mainContent">Skip to forecast</a>
   <div class="wrap">
     <header class="hero">
       <section class="heroCopy" aria-label="Dashboard introduction">
-        <span class="kicker">Launch weather briefing</span>
+        <span class="kicker">Local forecast &amp; launch planning</span>
         <h1>Weather Dashboard</h1>
-        <p class="subtitle">A GitHub Pages weather dashboard for live surface forecasts, rain timing, sea-level pressure, and dedicated MachX launch-weather checks.</p>
-        <div class="heroStats" aria-label="Dashboard features">
-          <span class="heroStat">Current + forecast</span>
-          <span class="heroStat">15-min rain</span>
-          <span class="heroStat">MachX launch windows</span>
-        </div>
+        <p class="subtitle">Live local conditions, 15-minute rain timing, sea-level pressure, and dedicated MachX launch-weather checks in one clear view.</p>
+        <ul class="heroStats">
+          <li class="heroStat">Current + forecast</li>
+          <li class="heroStat">15-min rain</li>
+          <li class="heroStat">MachX launch windows</li>
+        </ul>
       </section>
 
-      <section class="searchPanel" aria-label="Location search">
-        <div class="searchGrid">
-          <input id="locationInput" autocomplete="off" placeholder="Bishop's Stortford, Stansted, Snowdon, 51.87,0.16..." />
-          <button id="searchBtn" type="button">Search</button>
-        </div>
+      <section class="searchPanel" id="searchPanel" aria-label="Location search">
+        <form class="searchGrid" id="searchForm" role="search">
+          <label class="srOnly" for="locationInput">Town, postcode, or coordinates</label>
+          <input id="locationInput" type="search" enterkeyhint="search" autocomplete="off" spellcheck="false" placeholder="Town, postcode, or 51.87, 0.16" aria-describedby="searchHint">
+          <button id="searchBtn" type="submit">Search</button>
+        </form>
+        <p class="searchHint" id="searchHint">Search worldwide, enter coordinates, or use one of your quick locations.</p>
 
-        <div class="savedLocations" aria-label="Saved locations">
-          <span class="savedLabel">Saved</span>
+        <div class="savedLocations" id="savedLocations" role="group" aria-label="Quick locations">
+          <span class="savedLabel">Quick locations</span>
           <button class="savedLocationBtn" data-saved-name="Hatfield" data-saved-admin2="Hertfordshire" data-saved-admin1="England" data-saved-country="United Kingdom" data-saved-lat="51.7634" data-saved-lon="-0.2242" type="button">Hatfield</button>
           <button class="savedLocationBtn" data-saved-name="Bishop's Stortford" data-saved-admin2="Hertfordshire" data-saved-admin1="England" data-saved-country="United Kingdom" data-saved-lat="51.8719" data-saved-lon="0.1587" type="button">Bishop's Stortford</button>
           <button class="savedLocationBtn" data-saved-name="Mach X" data-saved-admin2="Campbeltown Airport" data-saved-admin1="Scotland" data-saved-country="United Kingdom" data-saved-lat="55.4372" data-saved-lon="-5.6864" data-launch-site="machx" type="button">Mach X</button>
+        </div>
+
+        <div class="locationActions" role="group" aria-label="Location actions">
+          <button class="secondary tiny" id="favoriteBtn" type="button" disabled>☆ Save location</button>
+          <button class="secondary tiny" id="shareBtn" type="button" disabled>Share forecast</button>
+          <button class="secondary tiny" id="refreshBtn" type="button" disabled>Refresh data</button>
         </div>
 
         <div class="controls">
@@ -547,15 +645,15 @@
           <div class="field" id="aloftStepField" hidden><label for="aloftStepSelect">Aloft step</label><select id="aloftStepSelect"><option value="100">100 m interpolated</option><option value="250">250 m interpolated</option><option value="500">500 m interpolated</option><option value="raw" selected>Raw pressure levels</option></select></div>
           <div class="field"><label>&nbsp;</label><button class="secondary" id="themeBtn" type="button" title="Toggle high-contrast light mode for bright sunlight">Sun mode</button></div>
           <div class="field"><label>&nbsp;</label><button class="secondary" id="gpsBtn" type="button">Use GPS</button></div>
-          <div class="field"><label>&nbsp;</label><button id="liveBtn" type="button" title="Use GPS, jump to now, and keep the forecast refreshed">Live weather</button></div>
+          <div class="field"><label>&nbsp;</label><button id="liveBtn" type="button" aria-pressed="false" title="Use GPS, jump to now, and keep the forecast refreshed">Live weather</button></div>
         </div>
-        <div id="geoResults" class="results"></div>
+        <div id="geoResults" class="results" aria-live="polite"></div>
       </section>
     </header>
 
-    <div id="notice" class="notice"></div>
+    <div id="notice" class="notice" role="status" aria-live="polite" aria-atomic="true"></div>
 
-    <main class="dashboardGrid">
+    <main class="dashboardGrid" id="mainContent" tabindex="-1">
       <section class="overviewGrid" id="overviewGrid" aria-label="Forecast overview">
         <article class="card" id="currentCard"><h2>Current weather</h2><p class="muted">Search a location to load the forecast.</p></article>
         <article class="card" id="dailyCard"><h2>Daily forecast</h2><p class="muted">Waiting for a location...</p></article>
@@ -586,13 +684,21 @@
   ];
   const MAX_AGL = 3000;
   const LAUNCH_UNUSABLE_SCORE = 55;
+  const FAVORITES_KEY = "weatherDashboardFavoriteLocations";
 
   const el = {
+    searchForm: document.getElementById("searchForm"),
+    searchPanel: document.getElementById("searchPanel"),
     locationInput: document.getElementById("locationInput"),
     searchBtn: document.getElementById("searchBtn"),
     gpsBtn: document.getElementById("gpsBtn"),
     liveBtn: document.getElementById("liveBtn"),
+    favoriteBtn: document.getElementById("favoriteBtn"),
+    shareBtn: document.getElementById("shareBtn"),
+    refreshBtn: document.getElementById("refreshBtn"),
+    savedLocations: document.getElementById("savedLocations"),
     themeBtn: document.getElementById("themeBtn"),
+    themeColor: document.getElementById("themeColor"),
     daysSelect: document.getElementById("daysSelect"),
     windUnitSelect: document.getElementById("windUnitSelect"),
     aloftStepSelect: document.getElementById("aloftStepSelect"),
@@ -616,12 +722,16 @@
     aloftLevels: [],
     selectedAloftTime: null,
     warning: "",
+    isBusy: false,
     liveMode: false,
     liveTimer: null,
     lastLiveUpdate: null,
     launchWindowDate: localStorage.getItem("weatherAloftLaunchDate") || "auto",
     launchWindowDurationHours: [0.5, 1, 2, 3, 4].includes(savedDuration) ? savedDuration : 2
   };
+  let activeRequestId = 0;
+  let activeRequestController = null;
+  let activeGpsRequestId = 0;
 
   const WEATHER_CODES = {
     0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
@@ -639,11 +749,38 @@
   function finite(v) { return typeof v === "number" && Number.isFinite(v); }
   function escapeHtml(value) { return String(value ?? "").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[c])); }
   function round(value, dp = 0) { return value === null || value === undefined || Number.isNaN(value) ? "—" : Number(value).toFixed(dp); }
-  function setBusy(isBusy) { el.searchBtn.disabled = isBusy; el.gpsBtn.disabled = isBusy; el.liveBtn.disabled = isBusy; el.searchBtn.textContent = isBusy ? "Loading..." : "Search"; }
+  function setBusy(isBusy) {
+    state.isBusy = Boolean(isBusy);
+    el.searchBtn.disabled = state.isBusy;
+    el.gpsBtn.disabled = state.isBusy;
+    el.liveBtn.disabled = state.isBusy;
+    el.searchBtn.textContent = state.isBusy ? "Loading…" : "Search";
+    el.searchPanel.setAttribute("aria-busy", state.isBusy ? "true" : "false");
+    syncLocationActions();
+  }
   function showNotice(message, type = "") { el.notice.textContent = message || ""; el.notice.className = `notice ${message ? "show" : ""} ${type}`.trim(); }
-  function setSunMode(on) { document.body.classList.toggle("sunMode", Boolean(on)); el.themeBtn.classList.toggle("themeToggleActive", Boolean(on)); el.themeBtn.textContent = on ? "Sun mode: on" : "Sun mode"; el.themeBtn.setAttribute("aria-pressed", on ? "true" : "false"); localStorage.setItem("weatherAloftSunMode", on ? "1" : "0"); }
+  function setSunMode(on) {
+    document.body.classList.toggle("sunMode", Boolean(on));
+    el.themeBtn.classList.toggle("themeToggleActive", Boolean(on));
+    el.themeBtn.textContent = on ? "Sun mode: on" : "Sun mode";
+    el.themeBtn.setAttribute("aria-pressed", on ? "true" : "false");
+    el.themeColor.setAttribute("content", on ? "#f1f8ff" : "#06131a");
+    localStorage.setItem("weatherAloftSunMode", on ? "1" : "0");
+  }
 
   setSunMode(localStorage.getItem("weatherAloftSunMode") === "1");
+  const savedDays = localStorage.getItem("weatherDashboardForecastDays");
+  const savedWindUnit = localStorage.getItem("weatherDashboardWindUnit");
+  if ([...el.daysSelect.options].some(option => option.value === savedDays)) el.daysSelect.value = savedDays;
+  if ([...el.windUnitSelect.options].some(option => option.value === savedWindUnit)) el.windUnitSelect.value = savedWindUnit;
+
+  function beginDataRequest() {
+    activeRequestId += 1;
+    activeRequestController?.abort();
+    activeRequestController = new AbortController();
+    return { id: activeRequestId, signal: activeRequestController.signal };
+  }
+  function isCancelledRequest(error) { return error?.name === "AbortError"; }
 
   function buildParams(params) {
     const search = new URLSearchParams();
@@ -653,11 +790,25 @@
     });
     return search.toString();
   }
-  async function fetchJson(url) {
-    const response = await fetch(url);
-    const data = await response.json().catch(() => null);
-    if (!response.ok || data?.error) throw new Error(data?.reason || `Request failed: ${response.status}`);
-    return data;
+  async function fetchJson(url, { signal, timeoutMs = 20000 } = {}) {
+    const controller = new AbortController();
+    let timedOut = false;
+    const abortFromParent = () => controller.abort();
+    if (signal?.aborted) controller.abort();
+    else signal?.addEventListener("abort", abortFromParent, { once: true });
+    const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, timeoutMs);
+    try {
+      const response = await fetch(url, { signal: controller.signal });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || data?.error) throw new Error(data?.reason || `Weather service request failed (${response.status}).`);
+      return data;
+    } catch (error) {
+      if (timedOut) throw new Error("The weather service took too long to respond. Please try again.");
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+      signal?.removeEventListener("abort", abortFromParent);
+    }
   }
   function parseLocalParts(iso) {
     const [date, time = "00:00"] = String(iso).split("T");
@@ -732,16 +883,16 @@
     if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return null;
     return { latitude, longitude, name: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`, admin1: "", admin2: "", country: "Custom coordinates", elevation: null };
   }
-  async function geocode(query) {
+  async function geocode(query, signal) {
     const coord = looksLikeCoordinates(query);
     if (coord) return [coord];
     const url = "https://geocoding-api.open-meteo.com/v1/search?" + buildParams({ name: query, count: 8, language: "en", format: "json" });
-    const data = await fetchJson(url);
+    const data = await fetchJson(url, { signal });
     return data.results || [];
   }
-  async function reverseGeocode(latitude, longitude) {
+  async function reverseGeocode(latitude, longitude, signal) {
     const url = "https://geocoding-api.open-meteo.com/v1/reverse?" + buildParams({ latitude, longitude, count: 1, language: "en", format: "json" });
-    const data = await fetchJson(url);
+    const data = await fetchJson(url, { signal });
     const match = data.results?.[0];
     return match ? { ...match, latitude, longitude, elevation: match.elevation ?? null, gpsLatitude: latitude, gpsLongitude: longitude } : null;
   }
@@ -750,6 +901,105 @@
     if (label) return label;
     if (finite(loc.latitude) && finite(loc.longitude)) return `${Number(loc.latitude).toFixed(4)}, ${Number(loc.longitude).toFixed(4)}`;
     return "Selected location";
+  }
+
+  function favoriteLocations() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]");
+      return Array.isArray(parsed) ? parsed.filter(loc => finite(loc?.latitude) && finite(loc?.longitude)).slice(0, 8) : [];
+    } catch { return []; }
+  }
+  function compactLocation(loc) {
+    return {
+      name: String(loc.name || "Saved location"),
+      admin2: String(loc.admin2 || ""),
+      admin1: String(loc.admin1 || ""),
+      country: String(loc.country || ""),
+      latitude: Number(loc.latitude),
+      longitude: Number(loc.longitude),
+      elevation: finite(loc.elevation) ? Number(loc.elevation) : null,
+      launchSite: String(loc.launchSite || "")
+    };
+  }
+  function sameLocation(a, b) {
+    return finite(a?.latitude) && finite(a?.longitude) && finite(b?.latitude) && finite(b?.longitude) && Math.abs(a.latitude - b.latitude) < 0.0002 && Math.abs(a.longitude - b.longitude) < 0.0002 && String(a.launchSite || "") === String(b.launchSite || "");
+  }
+  function isBuiltInLocation(loc) {
+    return [...el.savedLocations.querySelectorAll(".savedLocationBtn:not(.userSaved)")].some(button => sameLocation(savedLocationFromButton(button), loc));
+  }
+  function activateSavedLocationButton(button) {
+    stopLiveWeather();
+    const savedLoc = savedLocationFromButton(button);
+    el.locationInput.value = locationLabel(savedLoc);
+    loadLocation(savedLoc);
+  }
+  function renderUserFavorites() {
+    el.savedLocations.querySelectorAll(".userSaved").forEach(button => button.remove());
+    for (const loc of favoriteLocations()) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "savedLocationBtn userSaved";
+      button.textContent = loc.name || locationLabel(loc);
+      button.dataset.savedName = loc.name;
+      button.dataset.savedAdmin2 = loc.admin2;
+      button.dataset.savedAdmin1 = loc.admin1;
+      button.dataset.savedCountry = loc.country;
+      button.dataset.savedLat = String(loc.latitude);
+      button.dataset.savedLon = String(loc.longitude);
+      if (loc.launchSite) button.dataset.launchSite = loc.launchSite;
+      button.addEventListener("click", () => activateSavedLocationButton(button));
+      el.savedLocations.appendChild(button);
+    }
+  }
+  function syncLocationActions() {
+    const hasLocation = Boolean(state.location && finite(state.location.latitude) && finite(state.location.longitude));
+    const fixed = hasLocation && isBuiltInLocation(state.location);
+    const favorite = hasLocation && favoriteLocations().some(loc => sameLocation(loc, state.location));
+    el.favoriteBtn.disabled = state.isBusy || !hasLocation || fixed;
+    el.shareBtn.disabled = state.isBusy || !hasLocation;
+    el.refreshBtn.disabled = state.isBusy || !hasLocation;
+    el.favoriteBtn.textContent = fixed ? "★ Quick location" : favorite ? "★ Remove saved" : "☆ Save location";
+    el.favoriteBtn.setAttribute("aria-pressed", favorite || fixed ? "true" : "false");
+  }
+  function toggleFavoriteLocation() {
+    if (!state.location || isBuiltInLocation(state.location)) return;
+    const favorites = favoriteLocations();
+    const index = favorites.findIndex(loc => sameLocation(loc, state.location));
+    if (index >= 0) {
+      favorites.splice(index, 1);
+      localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+      showNotice(`Removed ${locationLabel(state.location)} from quick locations.`);
+    } else {
+      if (favorites.length >= 8) {
+        showNotice("You can save up to eight extra quick locations. Remove one before adding another.", "warn");
+        return;
+      }
+      favorites.push(compactLocation(state.location));
+      localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+      showNotice(`Saved ${locationLabel(state.location)} as a quick location.`);
+    }
+    renderUserFavorites();
+    syncLocationActions();
+  }
+  async function shareForecast() {
+    if (!state.location) return;
+    const label = locationLabel(state.location);
+    const current = state.surface?.current;
+    const summary = current ? `${round(current.temperature_2m)}°C and ${weatherText(current.weather_code)} in ${label}.` : `Weather forecast for ${label}.`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `Weather for ${label}`, text: summary, url: location.href });
+        return;
+      } catch (error) {
+        if (error?.name === "AbortError") return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(location.href);
+      showNotice("Forecast link copied to the clipboard.");
+    } catch {
+      showNotice(`Copy this forecast link: ${location.href}`, "warn");
+    }
   }
 
   function surfaceUrl(loc) {
@@ -767,13 +1017,16 @@
   function aloftUrl(loc, levels) {
     return "https://api.open-meteo.com/v1/ecmwf?" + buildParams({ latitude: loc.latitude, longitude: loc.longitude, hourly: aloftVariables(levels), timezone: "auto", forecast_days: Math.min(Number(el.daysSelect.value), 15), temperature_unit: "celsius", wind_speed_unit: "ms" });
   }
-  async function loadAloftWithFallback(loc) {
+  async function loadAloftWithFallback(loc, signal) {
     let lastError = null;
     for (const levels of PRESSURE_LEVEL_SETS) {
       try {
-        const data = await fetchJson(aloftUrl(loc, levels));
+        const data = await fetchJson(aloftUrl(loc, levels), { signal });
         return { data, levels, warning: levels.length < PRESSURE_LEVEL_SETS[0].length ? `Using a reduced pressure-level set: ${levels.join(", ")} hPa.` : "" };
-      } catch (err) { lastError = err; }
+      } catch (err) {
+        if (signal?.aborted) throw err;
+        lastError = err;
+      }
     }
     throw lastError || new Error("Could not load winds aloft.");
   }
@@ -781,33 +1034,43 @@
   async function searchLocation(query) {
     showNotice("");
     el.geoResults.innerHTML = "";
-    if (!query.trim()) return;
+    if (!query.trim()) {
+      showNotice("Enter a town, postcode, or latitude and longitude.", "warn");
+      el.locationInput.focus();
+      return;
+    }
+    const request = beginDataRequest();
     setBusy(true);
     try {
-      let results = await geocode(query);
+      let results = await geocode(query, request.signal);
       if (!results.length && query.includes(",")) {
         const shortQuery = query.split(",")[0].trim();
-        if (shortQuery && shortQuery !== query.trim()) results = await geocode(shortQuery);
+        if (shortQuery && shortQuery !== query.trim()) results = await geocode(shortQuery, request.signal);
       }
       if (!results.length) { showNotice("No matching location found. Try a nearby town, postcode, or latitude,longitude.", "warn"); return; }
       if (results.length === 1 || looksLikeCoordinates(query)) { await loadLocation(results[0]); return; }
       el.geoResults.innerHTML = results.map((r, i) => `<button class="resultBtn" data-index="${i}" type="button"><strong>${escapeHtml(locationLabel(r))}</strong><br><span class="muted small">${round(r.latitude, 4)}, ${round(r.longitude, 4)}${r.elevation != null ? ` · ${round(r.elevation)} m elevation` : ""}</span></button>`).join("");
       el.geoResults.querySelectorAll("button").forEach(button => button.addEventListener("click", () => loadLocation(results[Number(button.dataset.index)])));
       showNotice("Choose the correct result above.");
-    } catch (err) { showNotice(err.message, "error"); }
-    finally { setBusy(false); }
+    } catch (err) {
+      if (!isCancelledRequest(err)) showNotice(err.message || "Could not search for that location.", "error");
+    } finally {
+      if (request.id === activeRequestId) setBusy(false);
+    }
   }
 
   async function loadLocation(loc) {
+    const request = beginDataRequest();
     setBusy(true);
     showNotice("Loading forecast...");
     el.geoResults.innerHTML = "";
     try {
       const needsAloft = loc.launchSite === "machx";
       const [surface, aloftPack] = await Promise.all([
-        fetchJson(surfaceUrl(loc)),
-        needsAloft ? loadAloftWithFallback(loc) : Promise.resolve({ data: null, levels: [], warning: "" })
+        fetchJson(surfaceUrl(loc), { signal: request.signal }),
+        needsAloft ? loadAloftWithFallback(loc, request.signal) : Promise.resolve({ data: null, levels: [], warning: "" })
       ]);
+      if (request.id !== activeRequestId) return;
       state.location = loc;
       state.surface = surface;
       state.aloft = aloftPack.data;
@@ -822,9 +1085,13 @@
       if (loc.launchSite) params.set("launchSite", loc.launchSite);
       history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
       renderAll();
+      syncLocationActions();
       showNotice(state.warning || `Loaded ${label}. Times shown are local to the forecast location.`, state.warning ? "warn" : "");
-    } catch (err) { showNotice(err.message, "error"); }
-    finally { setBusy(false); }
+    } catch (err) {
+      if (!isCancelledRequest(err)) showNotice(err.message || "Could not load the forecast.", "error");
+    } finally {
+      if (request.id === activeRequestId) setBusy(false);
+    }
   }
 
   function nearestAloftTime(targetTime) {
@@ -862,7 +1129,8 @@
     const loc = state.location;
     const wind = windToUser(c.wind_speed_10m);
     const gust = windToUser(c.wind_gusts_10m);
-    el.currentCard.innerHTML = `<h2>${escapeHtml(locationLabel(loc))}</h2><p class="muted small">${formatLocal(c.time)} · ${escapeHtml(state.surface.timezone || "local time")} · elevation ${round(state.surface.elevation ?? loc.elevation)} m</p><div class="chips"><span class="chip">${round(c.temperature_2m)}°C · feels ${round(c.apparent_temperature)}°C</span><span class="chip">${escapeHtml(weatherText(c.weather_code))}</span><span class="chip">Wind ${wind.value} ${wind.unit} ${dirText(c.wind_direction_10m)} (${round(c.wind_direction_10m)}°)</span><span class="chip">Gust ${gust.value} ${gust.unit}</span><span class="chip">Humidity ${round(c.relative_humidity_2m)}%</span><span class="chip">Cloud ${round(c.cloud_cover)}%</span><span class="chip">MSL pressure ${round(c.pressure_msl)} hPa</span><span class="chip">Rain now ${round(c.precipitation, 1)} mm</span>${state.liveMode ? `<span class="chip">${escapeHtml(liveUpdateText())}</span>` : ""}</div>`;
+    const isDay = c.is_day !== 0;
+    el.currentCard.innerHTML = `<h2>${escapeHtml(locationLabel(loc))}</h2><div class="currentHero"><div class="currentCondition">${weatherIconSvg(c.weather_code, isDay)}<div><p class="currentTemp">${round(c.temperature_2m)}°</p><p class="currentSummary"><strong>${escapeHtml(weatherText(c.weather_code))}</strong><br>Feels like ${round(c.apparent_temperature)}°C</p></div></div><div class="currentTime"><strong>${formatLocal(c.time)}</strong><br>${escapeHtml(state.surface.timezone_abbreviation || state.surface.timezone || "Local time")}<br>${isDay ? "Daylight" : "Night-time"}</div></div><div class="currentMetrics"><div class="currentMetric"><span>Wind</span><strong>${wind.value} ${wind.unit} ${dirText(c.wind_direction_10m)} · ${round(c.wind_direction_10m)}°</strong></div><div class="currentMetric"><span>Gusts</span><strong>${gust.value} ${gust.unit}</strong></div><div class="currentMetric"><span>Humidity</span><strong>${round(c.relative_humidity_2m)}%</strong></div><div class="currentMetric"><span>Precipitation now</span><strong>${round(c.precipitation, 1)} mm</strong></div><div class="currentMetric"><span>MSL pressure</span><strong>${round(c.pressure_msl)} hPa</strong></div><div class="currentMetric"><span>Cloud cover</span><strong>${round(c.cloud_cover)}%</strong></div></div><p class="currentFooter">Elevation ${round(state.surface.elevation ?? loc.elevation)} m${state.liveMode ? ` · ${escapeHtml(liveUpdateText())}` : ""}</p>`;
   }
   function renderDaily() {
     const d = state.surface?.daily;
@@ -870,7 +1138,8 @@
     const cards = d.time.map((date, i) => {
       const wind = windToUser(d.wind_speed_10m_max?.[i]);
       const gust = windToUser(d.wind_gusts_10m_max?.[i]);
-      return `<div class="dayCard"><div class="dayTop"><strong>${formatDay(date)}</strong><span class="dayDate">${escapeHtml(weatherText(d.weather_code?.[i]))}</span></div><div class="dayTemp">${round(d.temperature_2m_max?.[i])}° / ${round(d.temperature_2m_min?.[i])}°</div><div class="muted small">Rain ${round(d.precipitation_sum?.[i], 1)} mm · ${round(d.precipitation_probability_max?.[i])}%</div><div class="muted small">Wind ${wind.value} ${wind.unit} ${dirText(d.wind_direction_10m_dominant?.[i])} · gust ${gust.value} ${gust.unit}</div><div class="muted small">Sun ${formatLocal(d.sunrise?.[i], false)}–${formatLocal(d.sunset?.[i], false)}</div></div>`;
+      const rainProbability = Math.max(0, Math.min(100, Number(d.precipitation_probability_max?.[i] || 0)));
+      return `<div class="dayCard"><div class="dayTop"><strong>${i === 0 ? "Today" : formatDay(date)}</strong><span class="dayDate">${i === 0 ? formatDay(date) : ""}</span></div><div class="dayWeather">${weatherIconSvg(d.weather_code?.[i], true)}<span class="dayWeatherText">${escapeHtml(weatherText(d.weather_code?.[i]))}</span></div><div class="dayTemp">${round(d.temperature_2m_max?.[i])}° <span class="muted">/ ${round(d.temperature_2m_min?.[i])}°</span></div><div class="dayRain metricVisual"><div class="metricVisualTop"><strong>${round(rainProbability)}% rain</strong><span class="muted small">${round(d.precipitation_sum?.[i], 1)} mm</span></div><span class="miniMeter rainMeter" style="--meter:${rainProbability}%" aria-label="${round(rainProbability)} percent chance of rain"><span></span></span></div><div class="muted small">Wind ${wind.value} ${wind.unit} ${dirText(d.wind_direction_10m_dominant?.[i])} · gust ${gust.value} ${gust.unit}</div><div class="muted small">Sun ${formatLocal(d.sunrise?.[i], false)}–${formatLocal(d.sunset?.[i], false)}</div></div>`;
     }).join("");
     el.dailyCard.innerHTML = `<h2>Daily forecast</h2><div class="dailyGrid">${cards}</div>`;
   }
@@ -1357,32 +1626,46 @@
   }
 
   function savedLocationFromButton(button) { return { name: button.dataset.savedName, admin2: button.dataset.savedAdmin2, admin1: button.dataset.savedAdmin1, country: button.dataset.savedCountry, latitude: Number(button.dataset.savedLat), longitude: Number(button.dataset.savedLon), elevation: null, launchSite: button.dataset.launchSite || "" }; }
-  document.querySelectorAll(".savedLocationBtn").forEach(button => button.addEventListener("click", () => { stopLiveWeather(); const savedLoc = savedLocationFromButton(button); el.locationInput.value = locationLabel(savedLoc); loadLocation(savedLoc); }));
-  el.searchBtn.addEventListener("click", () => { stopLiveWeather(); searchLocation(el.locationInput.value); });
-  el.locationInput.addEventListener("keydown", e => { if (e.key === "Enter") { stopLiveWeather(); searchLocation(el.locationInput.value); } });
+  renderUserFavorites();
+  document.querySelectorAll(".savedLocationBtn:not(.userSaved)").forEach(button => button.addEventListener("click", () => activateSavedLocationButton(button)));
+  el.searchForm.addEventListener("submit", event => { event.preventDefault(); stopLiveWeather(); searchLocation(el.locationInput.value); });
+  el.favoriteBtn.addEventListener("click", toggleFavoriteLocation);
+  el.shareBtn.addEventListener("click", shareForecast);
+  el.refreshBtn.addEventListener("click", () => { if (state.location) loadLocation(state.location); });
   el.themeBtn.addEventListener("click", () => setSunMode(!document.body.classList.contains("sunMode")));
-  el.windUnitSelect.addEventListener("change", renderAll);
+  el.windUnitSelect.addEventListener("change", () => { localStorage.setItem("weatherDashboardWindUnit", el.windUnitSelect.value); renderAll(); });
   el.aloftStepSelect.addEventListener("change", () => { renderAloft(); renderLaunchWindow(); });
-  el.daysSelect.addEventListener("change", () => { if (state.location) loadLocation(state.location); });
+  el.daysSelect.addEventListener("change", () => { localStorage.setItem("weatherDashboardForecastDays", el.daysSelect.value); if (state.location) loadLocation(state.location); });
 
-  function stopLiveWeather() { state.liveMode = false; if (state.liveTimer) clearInterval(state.liveTimer); state.liveTimer = null; el.liveBtn.textContent = "Live weather"; }
+  function stopLiveWeather() {
+    activeGpsRequestId += 1;
+    state.liveMode = false;
+    if (state.liveTimer) clearInterval(state.liveTimer);
+    state.liveTimer = null;
+    el.liveBtn.textContent = "Live weather";
+    el.liveBtn.setAttribute("aria-pressed", "false");
+  }
   async function useGpsLocation({ live = false } = {}) {
     if (!navigator.geolocation) { if (live) stopLiveWeather(); showNotice("This browser does not support geolocation. Enter a place or latitude,longitude instead.", "warn"); return; }
+    const gpsRequestId = ++activeGpsRequestId;
     setBusy(true);
     showNotice(live ? "Waiting for GPS permission for live weather..." : "Waiting for GPS permission...");
     navigator.geolocation.getCurrentPosition(async pos => {
+      if (gpsRequestId !== activeGpsRequestId) return;
       const latitude = pos.coords.latitude;
       const longitude = pos.coords.longitude;
       let loc = null;
       try { loc = await reverseGeocode(latitude, longitude); } catch (err) { console.warn("Reverse geocoding failed", err); }
+      if (gpsRequestId !== activeGpsRequestId) return;
       if (!loc) loc = { name: live ? "Live GPS location" : "GPS location", latitude, longitude, country: "GPS coordinates", admin1: "", admin2: "", elevation: null };
       await loadLocation(loc);
-    }, err => { setBusy(false); if (live) stopLiveWeather(); showNotice(err.message || "Could not get GPS location.", "error"); }, { enableHighAccuracy: true, timeout: 10000, maximumAge: live ? 60000 : 600000 });
+    }, err => { if (gpsRequestId !== activeGpsRequestId) return; setBusy(false); if (live) stopLiveWeather(); showNotice(err.message || "Could not get GPS location.", "error"); }, { enableHighAccuracy: true, timeout: 10000, maximumAge: live ? 60000 : 600000 });
   }
   function startLiveWeather() {
     state.liveMode = true;
     el.daysSelect.value = "1";
     el.liveBtn.textContent = "Live: on";
+    el.liveBtn.setAttribute("aria-pressed", "true");
     useGpsLocation({ live: true });
     if (state.liveTimer) clearInterval(state.liveTimer);
     state.liveTimer = setInterval(() => { if (state.liveMode) useGpsLocation({ live: true }); }, 10 * 60 * 1000);
@@ -1391,10 +1674,13 @@
   el.liveBtn.addEventListener("click", () => { if (state.liveMode) { stopLiveWeather(); showNotice("Live weather mode is off. The current loaded forecast stays on screen."); } else startLiveWeather(); });
 
   function initialLoad() {
+    syncLocationActions();
     const params = new URLSearchParams(location.search);
-    const lat = Number(params.get("lat"));
-    const lon = Number(params.get("lon"));
-    if (Number.isFinite(lat) && Number.isFinite(lon)) {
+    const latValue = params.get("lat");
+    const lonValue = params.get("lon");
+    const lat = latValue === null || latValue.trim() === "" ? NaN : Number(latValue);
+    const lon = lonValue === null || lonValue.trim() === "" ? NaN : Number(lonValue);
+    if (Number.isFinite(lat) && Number.isFinite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
       const loc = { latitude: lat, longitude: lon, name: params.get("name") || `${lat}, ${lon}`, country: "", admin1: "", admin2: "", elevation: null, launchSite: params.get("launchSite") || "" };
       el.locationInput.value = loc.name;
       loadLocation(loc);

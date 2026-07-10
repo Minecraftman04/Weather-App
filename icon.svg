@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Weather Dashboard</title>
+  <desc id="desc">A sun emerging from behind a cloud above rain and wind.</desc>
+  <defs>
+    <linearGradient id="background" x1="72" y1="52" x2="448" y2="462" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0e3343"/>
+      <stop offset="1" stop-color="#06131a"/>
+    </linearGradient>
+    <linearGradient id="weather" x1="150" y1="132" x2="376" y2="392" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#22d3ee"/>
+      <stop offset="1" stop-color="#34d399"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#background)"/>
+  <circle cx="316" cy="190" r="76" fill="#fbbf24"/>
+  <g fill="none" stroke="#fbbf24" stroke-linecap="round" stroke-width="18">
+    <path d="M316 78v34M316 268v34M204 190h34M394 190h34M237 111l24 24M371 245l24 24M395 111l-24 24"/>
+  </g>
+  <path d="M133 329c-34 0-61-27-61-61s27-61 61-61c12 0 23 3 33 9 20-49 68-83 124-83 70 0 128 53 134 122 29 8 50 34 50 65 0 37-30 67-67 67H133c-34 0-61-26-61-58Z" fill="#eafaff" stroke="url(#weather)" stroke-width="18"/>
+  <g fill="none" stroke="url(#weather)" stroke-linecap="round" stroke-width="18">
+    <path d="m169 416-13 25M250 416l-13 25M331 416l-13 25"/>
+    <path d="M367 430h68M390 463h45"/>
+  </g>
+</svg>

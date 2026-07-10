@@ -1,0 +1,30 @@
+{
+  "name": "Weather Dashboard",
+  "short_name": "Weather",
+  "description": "Local forecasts, rain timing, winds aloft, and MachX launch-weather planning.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#06131a",
+  "theme_color": "#06131a",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Bishop's Stortford",
+      "short_name": "Stortford",
+      "url": "./?lat=51.8719&lon=0.1587&name=Bishop%27s+Stortford"
+    },
+    {
+      "name": "Mach X launch weather",
+      "short_name": "Mach X",
+      "url": "./?lat=55.4372&lon=-5.6864&name=Mach+X&launchSite=machx"
+    }
+  ]
+}
