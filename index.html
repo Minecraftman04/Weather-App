@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="A fast, privacy-friendly weather dashboard with local forecasts, rain timing, winds aloft, and dedicated MachX launch-weather planning.">
+  <meta name="description" content="A fast, privacy-friendly weather dashboard with local forecasts, rain timing, winds aloft, and dedicated North Weald flight-window planning.">
   <meta name="theme-color" id="themeColor" content="#06131a">
   <meta name="color-scheme" content="dark light">
   <meta name="application-name" content="Weather Dashboard">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta property="og:title" content="Weather Dashboard">
-  <meta property="og:description" content="Local forecasts, rain timing, winds aloft, and MachX launch-weather planning in one responsive dashboard.">
+  <meta property="og:description" content="Local forecasts, rain timing, winds aloft, and North Weald flight-window planning in one responsive dashboard.">
   <meta property="og:type" content="website">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -42,8 +42,8 @@
     html { scroll-behavior: smooth; max-width: 100%; overflow-x: hidden; }
     body { max-width: 100%; overflow-x: hidden; }
     img, svg, canvas { max-width: 100%; }
-    .hero > *, .overviewGrid > *, .mainDataGrid > *, .controls > *, .toolbar > *, .launchBest > *, .launchMiniGrid > * { min-width: 0; }
-    .subtitle, .chip, .notice, .launchBestTime, .launchReasonTag, footer { overflow-wrap: anywhere; }
+    .hero > *, .overviewGrid > *, .mainDataGrid > *, .controls > *, .toolbar > *, .flightBest > * { min-width: 0; }
+    .subtitle, .chip, .notice, .flightBestTime, footer { overflow-wrap: anywhere; }
     .srOnly {
       position: absolute;
       width: 1px;
@@ -130,9 +130,6 @@
     body.sunMode .savedLocations,
     body.sunMode .dayCard,
     body.sunMode .currentMetric,
-    body.sunMode .launchRunBox,
-    body.sunMode .launchScoreExplanation,
-    body.sunMode .launchMiniStat,
     body.sunMode .aloftGraphPanel {
       background: rgba(9, 56, 90, 0.055);
       border-color: rgba(20, 72, 105, 0.16);
@@ -181,8 +178,8 @@
     }
     body.sunMode .bar { background: linear-gradient(90deg, #006bb6, #008a7a); }
     body.sunMode .rainRow td { background: rgba(0, 107, 182, 0.075); }
-    body.sunMode .bestLaunchRow td { background: rgba(0, 138, 122, 0.09); color: #073624; }
-    body.sunMode .badLaunchRow td { background: rgba(180, 35, 60, 0.09); color: #5f1020; }
+    body.sunMode .bestFlightRow td { background: rgba(0, 138, 122, 0.09); color: #073624; }
+    body.sunMode .badFlightRow td { background: rgba(180, 35, 60, 0.09); color: #5f1020; }
 
     a { color: var(--accent); }
     button, input, select { font: inherit; }
@@ -452,36 +449,15 @@
     .rainRow td { background: rgba(34, 211, 238, 0.08); }
     .rainIntensity { display: inline-block; margin-left: 8px; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--border); background: rgba(34, 211, 238, 0.12); color: var(--text); font-size: 0.82rem; }
 
-    #launchWindowCard { grid-column: 1 / -1; }
-    .launchHeader { display: flex; align-items: end; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; }
-    .launchHeader h2 { margin-bottom: 4px; }
-    .launchControls { display: flex; width: 100%; min-width: 0; gap: 10px; flex-wrap: wrap; justify-content: flex-end; align-items: end; }
-    .launchDurationControl { min-width: min(230px, 100%); }
-    .launchDayControl { min-width: min(270px, 100%); }
-    .launchMiniGrid { display: grid; grid-template-columns: repeat(4, minmax(140px, 1fr)); gap: 10px; margin: 12px 0; }
-    .launchMiniStat, .launchRunBox, .launchScoreExplanation { margin: 0; padding: 14px; border: 1px solid rgba(173, 220, 230, 0.14); border-radius: 18px; background: rgba(255,255,255,0.035); }
-    .launchRunBox, .launchScoreExplanation { margin: 12px 0; }
-    .launchMiniStat span { display: block; color: var(--muted); font-size: 0.78rem; font-weight: 760; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
-    .launchMiniStat strong { display: block; color: var(--text); font-size: 1.15rem; line-height: 1.15; }
-    .launchBest { display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, auto); gap: 12px; align-items: stretch; padding: 14px; border: 1px solid rgba(52, 211, 153, 0.30); border-radius: 18px; background: linear-gradient(135deg, rgba(52, 211, 153, 0.13), rgba(34, 211, 238, 0.08)), rgba(255,255,255,0.035); margin-bottom: 12px; }
-    .launchBestTime { font-size: clamp(1.35rem, 3vw, 2.35rem); line-height: 1.02; letter-spacing: -0.055em; font-weight: 930; margin: 3px 0 8px; }
-    .launchScoreBox { display: grid; place-items: center; text-align: center; min-width: 0; padding: 12px; border-radius: 16px; border: 1px solid rgba(173, 220, 230, 0.16); background: rgba(0, 0, 0, 0.16); }
-    .launchScoreValue { font-size: 2.2rem; line-height: 1; font-weight: 920; letter-spacing: -0.06em; }
-    .bestLaunchRow td { background: rgba(52, 211, 153, 0.10); color: var(--text); }
-    .badLaunchRow td { background: rgba(248, 113, 113, 0.12); color: var(--text); border-top: 1px solid rgba(248, 113, 113, 0.28); }
-    .launchScoreExplanation summary { cursor: pointer; font-weight: 850; color: var(--text); }
-    .launchScoreExplanation ul { margin: 10px 0 0 18px; color: var(--muted); line-height: 1.55; padding: 0; }
-    .launchReasonBox { margin: 12px 0; padding: 13px 14px; border: 1px solid rgba(251, 191, 36, 0.28); border-radius: 16px; background: rgba(251, 191, 36, 0.075); }
-    .launchReasonBox strong { display: block; margin-bottom: 7px; }
-    .launchReasonList { display: flex; flex-wrap: wrap; gap: 7px; }
-    .launchReasonTag { display: inline-flex; align-items: center; gap: 5px; padding: 5px 8px; border: 1px solid rgba(251, 191, 36, 0.24); border-radius: 999px; background: rgba(251, 191, 36, 0.08); color: var(--text); font-size: 0.84rem; line-height: 1.25; }
-    .launchReasonTag b { color: var(--warn); }
-    .scoreReasons { min-width: 0; width: min(330px, 70vw); max-width: 330px; white-space: normal; line-height: 1.35; overflow-wrap: anywhere; }
-    .scoreReasonLine { display: block; margin: 2px 0; }
-    .scoreReasonLine strong { color: var(--text); }
-    .scoreReasonPenalty { color: var(--warn); font-weight: 850; white-space: nowrap; }
-    body.sunMode .launchReasonBox { background: rgba(154, 97, 0, 0.07); border-color: rgba(154, 97, 0, 0.25); }
-    body.sunMode .launchReasonTag { background: rgba(154, 97, 0, 0.07); border-color: rgba(154, 97, 0, 0.22); }
+    #flightWindowCard { grid-column: 1 / -1; }
+    .flightHeader { display: flex; align-items: end; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; }
+    .flightHeader h2 { margin-bottom: 4px; }
+    .flightBest { display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, auto); gap: 12px; align-items: stretch; padding: 14px; border: 1px solid rgba(52, 211, 153, 0.30); border-radius: 18px; background: linear-gradient(135deg, rgba(52, 211, 153, 0.13), rgba(34, 211, 238, 0.08)), rgba(255,255,255,0.035); margin-bottom: 12px; }
+    .flightBestTime { font-size: clamp(1.35rem, 3vw, 2.35rem); line-height: 1.02; letter-spacing: -0.055em; font-weight: 930; margin: 3px 0 8px; }
+    .flightScoreBox { display: grid; place-items: center; text-align: center; min-width: 0; padding: 12px; border-radius: 16px; border: 1px solid rgba(173, 220, 230, 0.16); background: rgba(0, 0, 0, 0.16); }
+    .flightScoreValue { font-size: 2.2rem; line-height: 1; font-weight: 920; letter-spacing: -0.06em; }
+    .bestFlightRow td { background: rgba(52, 211, 153, 0.10); color: var(--text); }
+    .badFlightRow td { background: rgba(248, 113, 113, 0.12); color: var(--text); border-top: 1px solid rgba(248, 113, 113, 0.28); }
 
     footer { color: var(--muted-2); font-size: 0.86rem; margin-top: 24px; line-height: 1.55; padding: 0 4px; }
 
@@ -502,8 +478,7 @@
       .hourlyWeather { min-width: 220px; }
       .metricVisual { min-width: 130px; }
       .aloftSvg { min-height: 430px; }
-      .launchMiniGrid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
-      .launchBest { grid-template-columns: minmax(0, 1fr) minmax(190px, 240px); }
+      .flightBest { grid-template-columns: minmax(0, 1fr) minmax(190px, 240px); }
     }
     @media (min-width: 2400px) {
       .wrap { width: min(3200px, calc(100% - 120px)); }
@@ -518,8 +493,7 @@
       .dailyGrid { grid-template-columns: repeat(auto-fit, minmax(195px, 1fr)); gap: 16px; }
       .tableWrap table { min-width: 100%; }
       .aloftSvg { min-height: 520px; }
-      .launchMiniGrid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
-      .launchBest { grid-template-columns: minmax(0, 1fr) 260px; }
+      .flightBest { grid-template-columns: minmax(0, 1fr) 260px; }
     }
 
     @media (max-width: 1120px) {
@@ -527,11 +501,8 @@
       .heroCopy { min-height: auto; }
     }
     @media (max-width: 900px) {
-      .launchMiniGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .launchControls { justify-content: stretch; }
-      .launchControls .field { flex: 1 1 min(220px, 100%); min-width: 0; }
-      .launchBest { grid-template-columns: minmax(0, 1fr); }
-      .launchScoreBox { place-items: start; text-align: left; }
+      .flightBest { grid-template-columns: minmax(0, 1fr); }
+      .flightScoreBox { place-items: start; text-align: left; }
     }
     @media (max-width: 760px) {
       .wrap { width: calc(100% - 18px); padding-top: 12px; }
@@ -539,9 +510,6 @@
       .controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .heroCopy, .searchPanel, .card { border-radius: 19px; }
       h1 { max-width: 100%; font-size: clamp(2rem, 12vw, 3.8rem); }
-      .launchMiniGrid { grid-template-columns: minmax(0, 1fr); }
-      .launchDurationControl, .launchDayControl { min-width: 0; width: 100%; }
-      .launchControls .field { flex-basis: 100%; }
       .graphScroll { overflow: hidden; }
       .aloftGraphPanel { padding: 10px; }
       .aloftSvg { min-height: 230px; }
@@ -563,12 +531,12 @@
       .visibilityQuality { margin: 4px 0 0; }
     }
     @media (max-width: 520px) {
+      .searchGrid button, .controls button, .toolbar button { width: 100%; white-space: normal; }
       .wrap { width: calc(100% - 12px); padding-bottom: 24px; }
       .hero { gap: 10px; margin-bottom: 10px; }
       .heroCopy, .searchPanel, .card { padding: 14px; border-radius: 16px; }
       .searchPanel { gap: 10px; }
       .controls { grid-template-columns: minmax(0, 1fr); }
-      .searchGrid button, .controls button, .toolbar button, .launchControls button { width: 100%; white-space: normal; }
       .savedLocations { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .savedLabel { grid-column: 1 / -1; }
       .savedLocationBtn { width: 100%; min-width: 0; white-space: normal; }
@@ -592,8 +560,8 @@
       .currentCondition .weatherIcon svg { width: 50px; height: 50px; }
       .currentMetrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .dailyGrid { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(168px, 78vw); grid-template-columns: none; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; padding-bottom: 7px; }
-      .launchHeader { align-items: stretch; }
-      .launchScoreValue { font-size: 1.9rem; }
+      .flightHeader { align-items: stretch; }
+      .flightScoreValue { font-size: 1.9rem; }
       footer { padding: 0; }
     }
 
@@ -602,19 +570,20 @@
       *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
     }
   </style>
+  <link rel="stylesheet" href="flight.css">
 </head>
 <body>
   <a class="skipLink" href="#mainContent">Skip to forecast</a>
   <div class="wrap">
     <header class="hero">
       <section class="heroCopy" aria-label="Dashboard introduction">
-        <span class="kicker">Local forecast &amp; launch planning</span>
+        <span class="kicker">Local forecast &amp; flight planning</span>
         <h1>Weather Dashboard</h1>
-        <p class="subtitle">Live local conditions, 15-minute rain timing, sea-level pressure, and dedicated MachX launch-weather checks in one clear view.</p>
+        <p class="subtitle">Live local conditions, 15-minute rain timing, sea-level pressure, and North Weald flight-window planning in one clear view.</p>
         <ul class="heroStats">
           <li class="heroStat">Current + forecast</li>
           <li class="heroStat">15-min rain</li>
-          <li class="heroStat">MachX launch windows</li>
+          <li class="heroStat">EGSX flight windows</li>
         </ul>
       </section>
 
@@ -630,7 +599,7 @@
           <span class="savedLabel">Quick locations</span>
           <button class="savedLocationBtn" data-saved-name="Hatfield" data-saved-admin2="Hertfordshire" data-saved-admin1="England" data-saved-country="United Kingdom" data-saved-lat="51.7634" data-saved-lon="-0.2242" type="button">Hatfield</button>
           <button class="savedLocationBtn" data-saved-name="Bishop's Stortford" data-saved-admin2="Hertfordshire" data-saved-admin1="England" data-saved-country="United Kingdom" data-saved-lat="51.8719" data-saved-lon="0.1587" type="button">Bishop's Stortford</button>
-          <button class="savedLocationBtn" data-saved-name="Mach X" data-saved-admin2="Campbeltown Airport" data-saved-admin1="Scotland" data-saved-country="United Kingdom" data-saved-lat="55.4372" data-saved-lon="-5.6864" data-launch-site="machx" type="button">Mach X</button>
+          <button class="savedLocationBtn" data-saved-name="North Weald (EGSX)" data-saved-admin2="Essex" data-saved-admin1="England" data-saved-country="United Kingdom" data-saved-lat="51.7217" data-saved-lon="0.1542" data-saved-elevation="97.8408" type="button">North Weald · EGSX</button>
         </div>
 
         <div class="locationActions" role="group" aria-label="Location actions">
@@ -642,7 +611,7 @@
         <div class="controls">
           <div class="field"><label for="daysSelect">Forecast</label><select id="daysSelect"><option value="1">1 day</option><option value="3">3 days</option><option value="7" selected>7 days</option><option value="10">10 days</option><option value="15">15 days</option></select></div>
           <div class="field"><label for="windUnitSelect">Wind</label><select id="windUnitSelect"><option value="kt">knots</option><option value="ms">m/s</option><option value="kmh">km/h</option><option value="mph" selected>mph</option></select></div>
-          <div class="field" id="aloftStepField" hidden><label for="aloftStepSelect">Aloft step</label><select id="aloftStepSelect"><option value="100">100 m interpolated</option><option value="250">250 m interpolated</option><option value="500">500 m interpolated</option><option value="raw" selected>Raw pressure levels</option></select></div>
+          <div class="field" id="aloftStepField" hidden><label for="aloftStepSelect">Aloft step</label><select id="aloftStepSelect"><option value="500" selected>500 ft interpolated</option><option value="1000">1,000 ft interpolated</option><option value="raw">Raw pressure levels</option></select></div>
           <div class="field"><label>&nbsp;</label><button class="secondary" id="themeBtn" type="button" title="Toggle high-contrast light mode for bright sunlight">Sun mode</button></div>
           <div class="field"><label>&nbsp;</label><button class="secondary" id="gpsBtn" type="button">Use GPS</button></div>
           <div class="field"><label>&nbsp;</label><button id="liveBtn" type="button" aria-pressed="false" title="Use GPS, jump to now, and keep the forecast refreshed">Live weather</button></div>
@@ -660,8 +629,8 @@
       </section>
 
       <section class="mainDataGrid" aria-label="Forecast details">
+        <article class="card" id="flightWindowCard" hidden><h2>North Weald flight windows</h2><p class="muted">Select North Weald · EGSX to monitor winds and calculate flight periods.</p></article>
         <article class="card" id="aloftCard" hidden><h2>Winds aloft</h2><p class="muted">Waiting for a location...</p></article>
-        <article class="card" id="launchWindowCard" hidden><h2>MachX launch window</h2><p class="muted">Select Mach X to calculate launch windows at Campbeltown Airport from 09:30 to 22:00.</p></article>
         <article class="card" id="minuteRainCard"><details class="rainDropdown"><summary><span><span class="rainSummaryTitle">Rain nowcast</span><span class="rainSummarySub">15-minute rain forecast — hidden until opened</span></span></summary><div class="rainDropdownBody"><p class="muted">Waiting for a location...</p></div></details></article>
       </section>
 
@@ -669,21 +638,25 @@
     </main>
 
     <footer>
-      Data: <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo</a>. Location search: Open-Meteo Geocoding / GeoNames. This page runs fully in the browser and is suitable for GitHub Pages. It is a planning aid only, not a safety or launch-permission product.
+      Data: <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo</a>. Location search: Open-Meteo Geocoding / GeoNames. This page runs fully in the browser and is suitable for GitHub Pages. Flight windows screen your selected weather preferences; use an official aviation briefing before flying.
     </footer>
   </div>
 
+<script src="flight-planner.js"></script>
+<script src="flight-ui.js"></script>
 <script>
 (() => {
   "use strict";
 
-  const PRESSURE_LEVEL_SETS = [
-    [1000, 975, 950, 925, 900, 850, 800, 700],
-    [1000, 950, 925, 900, 850, 800, 700],
-    [1000, 925, 850, 700]
-  ];
-  const MAX_AGL = 3000;
-  const LAUNCH_UNUSABLE_SCORE = 55;
+  const MAX_AGL = 1524; // 5,000 ft above North Weald.
+  const NORTH_WEALD = { name: "North Weald (EGSX)", admin2: "Essex", admin1: "England", country: "United Kingdom", latitude: 51.7217, longitude: 0.1542, elevation: 97.8408 };
+  const FLIGHT_SETTINGS_KEY = "weatherNorthWealdFlightSettingsV1";
+  let flightSettings;
+  try { flightSettings = FlightPlanner.settings(JSON.parse(localStorage.getItem(FLIGHT_SETTINGS_KEY) || "{}")); }
+  catch { flightSettings = FlightPlanner.settings(); }
+  let flightRefreshTimer = null;
+  function isNorthWealdLocation(loc = state.location) { return Math.abs(Number(loc?.latitude) - NORTH_WEALD.latitude) < 0.006 && Math.abs(Number(loc?.longitude) - NORTH_WEALD.longitude) < 0.006; }
+
   const FAVORITES_KEY = "weatherDashboardFavoriteLocations";
 
   const el = {
@@ -709,12 +682,11 @@
     currentCard: document.getElementById("currentCard"),
     dailyCard: document.getElementById("dailyCard"),
     minuteRainCard: document.getElementById("minuteRainCard"),
-    launchWindowCard: document.getElementById("launchWindowCard"),
+    flightWindowCard: document.getElementById("flightWindowCard"),
     hourlyCard: document.getElementById("hourlyCard"),
     aloftCard: document.getElementById("aloftCard")
   };
 
-  const savedDuration = Number(localStorage.getItem("weatherAloftLaunchDurationHours"));
   let state = {
     location: null,
     surface: null,
@@ -726,8 +698,8 @@
     liveMode: false,
     liveTimer: null,
     lastLiveUpdate: null,
-    launchWindowDate: localStorage.getItem("weatherAloftLaunchDate") || "auto",
-    launchWindowDurationHours: [0.5, 1, 2, 3, 4].includes(savedDuration) ? savedDuration : 2
+    fetchedAt: null,
+    flightDetailDate: null
   };
   let activeRequestId = 0;
   let activeRequestController = null;
@@ -816,7 +788,7 @@
     const [hh = 0, mm = 0] = time.split(":").map(Number);
     return { y, m, d, hh, mm, date, time };
   }
-  function localStamp(iso) { const p = parseLocalParts(iso); return Date.UTC(p.y, p.m - 1, p.d, p.hh, p.mm || 0); }
+  function localStamp(iso) { if (/[+-]\d{2}:\d{2}$|Z$/.test(String(iso))) return Date.parse(iso); const p = parseLocalParts(iso); return Date.UTC(p.y, p.m - 1, p.d, p.hh, p.mm || 0); }
   function formatLocal(iso, includeDate = true) {
     if (!iso) return "—";
     const p = parseLocalParts(iso);
@@ -873,7 +845,6 @@
     if (!finite(ms)) return { value: "—", unit: info.label, numeric: null };
     return { value: (ms * info.factor).toFixed(info.dp), unit: info.label, numeric: ms * info.factor };
   }
-  function msToMphNumber(ms) { return finite(ms) ? ms * 2.23693629 : null; }
 
   function looksLikeCoordinates(text) {
     const match = text.trim().match(/^(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)$/);
@@ -917,12 +888,11 @@
       country: String(loc.country || ""),
       latitude: Number(loc.latitude),
       longitude: Number(loc.longitude),
-      elevation: finite(loc.elevation) ? Number(loc.elevation) : null,
-      launchSite: String(loc.launchSite || "")
+      elevation: finite(loc.elevation) ? Number(loc.elevation) : null
     };
   }
   function sameLocation(a, b) {
-    return finite(a?.latitude) && finite(a?.longitude) && finite(b?.latitude) && finite(b?.longitude) && Math.abs(a.latitude - b.latitude) < 0.0002 && Math.abs(a.longitude - b.longitude) < 0.0002 && String(a.launchSite || "") === String(b.launchSite || "");
+    return finite(a?.latitude) && finite(a?.longitude) && finite(b?.latitude) && finite(b?.longitude) && Math.abs(a.latitude - b.latitude) < 0.0002 && Math.abs(a.longitude - b.longitude) < 0.0002;
   }
   function isBuiltInLocation(loc) {
     return [...el.savedLocations.querySelectorAll(".savedLocationBtn:not(.userSaved)")].some(button => sameLocation(savedLocationFromButton(button), loc));
@@ -946,7 +916,6 @@
       button.dataset.savedCountry = loc.country;
       button.dataset.savedLat = String(loc.latitude);
       button.dataset.savedLon = String(loc.longitude);
-      if (loc.launchSite) button.dataset.launchSite = loc.launchSite;
       button.addEventListener("click", () => activateSavedLocationButton(button));
       el.savedLocations.appendChild(button);
     }
@@ -1007,31 +976,17 @@
     const hourly = ["temperature_2m", "apparent_temperature", "is_day", "precipitation_probability", "precipitation", "weather_code", "cloud_cover", "visibility", "pressure_msl", "surface_pressure", "wind_speed_10m", "wind_direction_10m", "wind_gusts_10m"];
     const minutely15 = ["precipitation", "rain", "snowfall", "weather_code"];
     const daily = ["weather_code", "temperature_2m_max", "temperature_2m_min", "precipitation_sum", "precipitation_probability_max", "wind_speed_10m_max", "wind_gusts_10m_max", "wind_direction_10m_dominant", "sunrise", "sunset"];
-    return "https://api.open-meteo.com/v1/forecast?" + buildParams({ latitude: loc.latitude, longitude: loc.longitude, current, hourly, minutely_15: minutely15, daily, timezone: "auto", forecast_days: el.daysSelect.value, forecast_minutely_15: 32, temperature_unit: "celsius", wind_speed_unit: "ms", precipitation_unit: "mm" });
+    const flight = isNorthWealdLocation(loc);
+    if (flight) hourly.push("cloud_cover_low", "freezing_level_height", ...aloftVariables(FlightPlanner.LEVELS));
+    return `https://api.open-meteo.com/v1/${flight ? "gfs" : "forecast"}?` + buildParams({ latitude: loc.latitude, longitude: loc.longitude, elevation: flight ? NORTH_WEALD.elevation : undefined, current, hourly, minutely_15: minutely15, daily, timezone: flight ? "Europe/London" : "auto", timeformat: flight ? "unixtime" : "iso8601", forecast_days: el.daysSelect.value, forecast_minutely_15: 32, temperature_unit: "celsius", wind_speed_unit: "ms", precipitation_unit: "mm" });
   }
   function aloftVariables(levels) {
     const out = [];
     for (const level of levels) out.push(`wind_speed_${level}hPa`, `wind_direction_${level}hPa`, `geopotential_height_${level}hPa`, `temperature_${level}hPa`, `cloud_cover_${level}hPa`);
     return out;
   }
-  function aloftUrl(loc, levels) {
-    return "https://api.open-meteo.com/v1/ecmwf?" + buildParams({ latitude: loc.latitude, longitude: loc.longitude, hourly: aloftVariables(levels), timezone: "auto", forecast_days: Math.min(Number(el.daysSelect.value), 15), temperature_unit: "celsius", wind_speed_unit: "ms" });
-  }
-  async function loadAloftWithFallback(loc, signal) {
-    let lastError = null;
-    for (const levels of PRESSURE_LEVEL_SETS) {
-      try {
-        const data = await fetchJson(aloftUrl(loc, levels), { signal });
-        return { data, levels, warning: levels.length < PRESSURE_LEVEL_SETS[0].length ? `Using a reduced pressure-level set: ${levels.join(", ")} hPa.` : "" };
-      } catch (err) {
-        if (signal?.aborted) throw err;
-        lastError = err;
-      }
-    }
-    throw lastError || new Error("Could not load winds aloft.");
-  }
-
   async function searchLocation(query) {
+    if (/^(?:egsx|north weald(?: airport| airfield| aerodrome)?)$/i.test(query.trim())) { await loadLocation({ ...NORTH_WEALD }); return; }
     showNotice("");
     el.geoResults.innerHTML = "";
     if (!query.trim()) {
@@ -1065,24 +1020,26 @@
     showNotice("Loading forecast...");
     el.geoResults.innerHTML = "";
     try {
-      const needsAloft = loc.launchSite === "machx";
-      const [surface, aloftPack] = await Promise.all([
-        fetchJson(surfaceUrl(loc), { signal: request.signal }),
-        needsAloft ? loadAloftWithFallback(loc, request.signal) : Promise.resolve({ data: null, levels: [], warning: "" })
-      ]);
+      if (isNorthWealdLocation(loc)) loc = { ...NORTH_WEALD };
+      const flight = isNorthWealdLocation(loc);
+      const surface = await fetchJson(surfaceUrl(loc), { signal: request.signal });
+      if (flight) FlightPlanner.normalize(surface);
+      const aloftPack = { data: flight ? surface : null, levels: flight ? FlightPlanner.LEVELS : [], warning: "" };
       if (request.id !== activeRequestId) return;
       state.location = loc;
       state.surface = surface;
       state.aloft = aloftPack.data;
       state.aloftLevels = aloftPack.levels;
-      state.selectedAloftTime = state.liveMode ? nearestAloftTime(surface?.current?.time) : (state.aloft?.hourly?.time?.[0] || null);
+      state.selectedAloftTime = nearestAloftTime(surface?.current?.time);
+      state.fetchedAt = Date.now();
+      state.flightDetailDate = null;
+      configureFlightRefresh();
       state.warning = aloftPack.warning;
       if (state.liveMode) state.lastLiveUpdate = new Date();
       const label = locationLabel(loc);
       el.locationInput.value = label;
       localStorage.setItem("weatherAloftLastLocation", JSON.stringify(loc));
       const params = new URLSearchParams({ lat: loc.latitude, lon: loc.longitude, name: label });
-      if (loc.launchSite) params.set("launchSite", loc.launchSite);
       history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
       renderAll();
       syncLocationActions();
@@ -1102,25 +1059,18 @@
   }
   function liveUpdateText() { return state.lastLiveUpdate ? `Live mode · refreshed ${state.lastLiveUpdate.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}` : "Live mode on"; }
   function applyLocationMode() {
-    const machXMode = isMachXLaunchLocation();
-    el.overviewGrid.hidden = machXMode;
-    el.aloftCard.hidden = !machXMode;
-    el.aloftStepField.hidden = !machXMode;
-    el.minuteRainCard.hidden = machXMode;
-    el.hourlyCard.hidden = machXMode;
-    el.launchWindowCard.hidden = !machXMode;
+    const flight = isNorthWealdLocation();
+    el.overviewGrid.hidden = false;
+    el.aloftCard.hidden = !flight;
+    el.aloftStepField.hidden = !flight;
+    el.minuteRainCard.hidden = false;
+    el.hourlyCard.hidden = false;
+    el.flightWindowCard.hidden = !flight;
   }
   function renderAll() {
     applyLocationMode();
-    if (isMachXLaunchLocation()) {
-      renderAloft();
-      renderLaunchWindow();
-      return;
-    }
-    renderCurrent();
-    renderDaily();
-    renderMinuteRain();
-    renderHourly();
+    renderCurrent(); renderDaily(); renderMinuteRain(); renderHourly();
+    if (isNorthWealdLocation()) { renderFlightWindow(); renderAloft(); }
   }
 
   function renderCurrent() {
@@ -1190,7 +1140,7 @@
       h.time.forEach((t, i) => { const diff = Math.abs(localStamp(t) - target); if (diff < bestDiff) { best = i; bestDiff = diff; } });
       idx = best;
     }
-    const elevation = Number(state.surface?.elevation ?? state.location?.elevation ?? 0);
+    const elevation = isNorthWealdLocation() ? NORTH_WEALD.elevation : Number(state.surface?.elevation ?? state.location?.elevation ?? 0);
     return { label: "10 m surface", source: "surface", pressure: null, agl: 10, msl: elevation + 10, speed: h.wind_speed_10m?.[idx], dir: h.wind_direction_10m?.[idx], temp: h.temperature_2m?.[idx], cloud: h.cloud_cover?.[idx] };
   }
   function surfaceIndexForTime(time) {
@@ -1213,8 +1163,8 @@
     const data = state.aloft?.hourly;
     if (!data?.time?.length) return [];
     let idx = data.time.indexOf(time);
-    if (idx < 0) idx = 0;
-    const elevation = Number(state.surface?.elevation ?? state.location?.elevation ?? 0);
+    if (idx < 0) return [];
+    const elevation = isNorthWealdLocation() ? NORTH_WEALD.elevation : Number(state.surface?.elevation ?? state.location?.elevation ?? 0);
     const points = [];
     const surface = surfacePointForTime(time);
     if (surface && finite(surface.speed) && finite(surface.dir)) points.push(surface);
@@ -1224,7 +1174,7 @@
       const dir = data[`wind_direction_${level}hPa`]?.[idx];
       const temp = data[`temperature_${level}hPa`]?.[idx];
       const cloud = data[`cloud_cover_${level}hPa`]?.[idx];
-      if ([hgt, speed, dir].every(finite)) points.push({ label: `${level} hPa`, source: "pressure", pressure: level, msl: hgt, agl: hgt - elevation, speed, dir, temp, cloud });
+      if ([hgt, speed, dir].every(finite) && hgt > elevation + 10) points.push({ label: `${level} hPa`, source: "pressure", pressure: level, msl: hgt, agl: hgt - elevation, speed, dir, temp, cloud });
     }
     return points.sort((a, b) => a.agl - b.agl);
   }
@@ -1234,7 +1184,7 @@
   function interpolateAt(points, agl) {
     const valid = points.filter(p => finite(p.agl) && finite(p.speed) && finite(p.dir)).sort((a, b) => a.agl - b.agl);
     if (!valid.length) return null;
-    const exact = valid.find(p => Math.abs(p.agl - agl) < 25);
+    const exact = valid.find(p => Math.abs(p.agl - agl) < 0.01);
     if (exact) return { ...exact, targetAgl: agl, interpolated: false };
     let lower = null, upper = null;
     for (let i = 0; i < valid.length - 1; i++) if (valid[i].agl <= agl && valid[i + 1].agl >= agl) { lower = valid[i]; upper = valid[i + 1]; break; }
@@ -1243,13 +1193,13 @@
     const a = windToUV(lower.speed, lower.dir);
     const b = windToUV(upper.speed, upper.dir);
     const wind = uvToWind(lerp(a.u, b.u, f), lerp(a.v, b.v, f));
-    return { label: `${Math.round(agl)} m AGL`, source: `${lower.label} → ${upper.label}`, pressure: null, targetAgl: agl, agl, msl: lerp(lower.msl, upper.msl, f), speed: wind.speed, dir: wind.dir, temp: finite(lower.temp) && finite(upper.temp) ? lerp(lower.temp, upper.temp, f) : null, cloud: finite(lower.cloud) && finite(upper.cloud) ? lerp(lower.cloud, upper.cloud, f) : null, interpolated: true };
+    return { label: `${Math.round(agl * FlightPlanner.FT)} ft AGL`, source: `${lower.label} → ${upper.label}`, pressure: null, targetAgl: agl, agl, msl: lerp(lower.msl, upper.msl, f), speed: wind.speed, dir: wind.dir, temp: finite(lower.temp) && finite(upper.temp) ? lerp(lower.temp, upper.temp, f) : null, cloud: finite(lower.cloud) && finite(upper.cloud) ? lerp(lower.cloud, upper.cloud, f) : null, interpolated: true };
   }
   function aloftDisplayPoints(points, mode) {
     if (mode === "raw") return points.filter(p => p.source === "surface" || (p.agl >= 0 && p.agl <= MAX_AGL)).filter(p => finite(p.agl) && finite(p.speed) && finite(p.dir)).sort((a, b) => a.agl - b.agl);
-    const step = Number(mode);
+    const step = Number(mode) / FlightPlanner.FT;
     const targets = [10];
-    for (let h = step; h <= MAX_AGL; h += step) targets.push(h);
+    for (let h = step; h <= MAX_AGL + 0.001; h += step) targets.push(Math.min(h, MAX_AGL));
     return targets.map(agl => interpolateAt(points, agl)).filter(Boolean).filter(p => finite(p.agl) && finite(p.speed) && finite(p.dir));
   }
   function windCell(point) {
@@ -1259,8 +1209,8 @@
   }
   function aloftRows(points, mode) {
     const display = aloftDisplayPoints(points, mode);
-    if (mode === "raw") return display.map(p => `<tr><td>${escapeHtml(p.label)}</td><td>${round(p.agl)} m</td><td>${round(p.msl)} m</td><td>${windCell(p)}</td><td>${round(p.cloud)}%</td><td>${round(p.temp, 1)}°C</td><td>${p.source === "surface" ? "surface forecast" : "pressure level"}</td></tr>`).join("");
-    return display.map(p => `<tr><td>${round(p.targetAgl ?? p.agl)} m</td><td>${round(p.msl)} m</td><td>${windCell(p)}</td><td>${round(p.cloud)}%</td><td>${round(p.temp, 1)}°C</td><td>${escapeHtml(p.interpolated ? `interpolated: ${p.source}` : p.label)}</td></tr>`).join("");
+    if (mode === "raw") return display.map(p => `<tr><td>${escapeHtml(p.label)}</td><td>${round(p.agl * FlightPlanner.FT)} ft</td><td>${round(p.msl * FlightPlanner.FT)} ft</td><td>${windCell(p)}</td><td>${round(p.cloud)}%</td><td>${round(p.temp, 1)}°C</td><td>${p.source === "surface" ? "surface forecast" : "pressure level"}</td></tr>`).join("");
+    return display.map(p => `<tr><td>${round((p.targetAgl ?? p.agl) * FlightPlanner.FT)} ft</td><td>${round(p.msl * FlightPlanner.FT)} ft</td><td>${windCell(p)}</td><td>${round(p.cloud)}%</td><td>${round(p.temp, 1)}°C</td><td>${escapeHtml(p.interpolated ? `interpolated: ${p.source}` : p.label)}</td></tr>`).join("");
   }
   function aloftGraphHtml(points, mode) {
     const display = aloftDisplayPoints(points, mode).filter(p => p.agl >= 0 && p.agl <= MAX_AGL && finite(p.speed));
@@ -1275,15 +1225,15 @@
     const y = agl => top + (1 - agl / MAX_AGL) * plotH;
     const path = display.map((p, i) => `${i ? "L" : "M"}${x(p.speed).toFixed(1)} ${y(p.agl).toFixed(1)}`).join(" ");
     const area = `M${left} ${y(0)} ${display.map(p => `L${x(p.speed).toFixed(1)} ${y(p.agl).toFixed(1)}`).join(" ")} L${left} ${y(display[display.length - 1].agl).toFixed(1)} Z`;
-    const yTicks = [0, 500, 1000, 1500, 2000, 2500, 3000];
+    const yTicks = [0, 1000, 2000, 3000, 4000, 5000];
     const xTicks = [0, 0.25, 0.5, 0.75, 1].map(f => Math.round(maxSpeed * f));
     const grid = [
-      ...yTicks.map(t => `<line class="graphGrid" x1="${left}" y1="${y(t).toFixed(1)}" x2="${width - right}" y2="${y(t).toFixed(1)}"></line><text class="graphText" x="${left - 10}" y="${y(t).toFixed(1)}" text-anchor="end" dominant-baseline="middle">${t}</text>`),
+      ...yTicks.map(t => `<line class="graphGrid" x1="${left}" y1="${y(t / FlightPlanner.FT).toFixed(1)}" x2="${width - right}" y2="${y(t / FlightPlanner.FT).toFixed(1)}"></line><text class="graphText" x="${left - 10}" y="${y(t / FlightPlanner.FT).toFixed(1)}" text-anchor="end" dominant-baseline="middle">${t}</text>`),
       ...xTicks.map(t => `<line class="graphGrid" x1="${(left + (t / maxSpeed) * plotW).toFixed(1)}" y1="${top}" x2="${(left + (t / maxSpeed) * plotW).toFixed(1)}" y2="${height - bottom}"></line><text class="graphText" x="${(left + (t / maxSpeed) * plotW).toFixed(1)}" y="${height - 24}" text-anchor="middle">${t}</text>`)
     ].join("");
-    const pointsSvg = display.map(p => `<circle class="graphPoint" cx="${x(p.speed).toFixed(1)}" cy="${y(p.agl).toFixed(1)}" r="4"><title>${escapeHtml(p.label)} · ${round(p.agl)} m · ${round(p.speed * info.factor, info.dp)} ${info.label} from ${round(p.dir)}°</title></circle>`).join("");
+    const pointsSvg = display.map(p => `<circle class="graphPoint" cx="${x(p.speed).toFixed(1)}" cy="${y(p.agl).toFixed(1)}" r="4"><title>${escapeHtml(p.label)} · ${round(p.agl * FlightPlanner.FT)} ft · ${round(p.speed * info.factor, info.dp)} ${info.label} from ${round(p.dir)}°</title></circle>`).join("");
     const maxPoint = display.reduce((best, p) => p.speed > best.speed ? p : best, display[0]);
-    return `<div class="aloftGraphPanel"><div class="graphTop"><div><strong>Winds aloft graph</strong><p class="muted small" style="margin:4px 0 0">Wind speed versus height AGL for the selected forecast time.</p></div><div class="chips" style="margin-top:0"><span class="chip">Max ${round(maxPoint.speed * info.factor, info.dp)} ${info.label} at ${round(maxPoint.agl)} m</span><span class="chip">${display.length} plotted levels</span></div></div><div class="graphScroll"><svg class="aloftSvg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Wind aloft graph"><path class="graphArea" d="${area}"></path>${grid}<line class="graphAxis" x1="${left}" y1="${top}" x2="${left}" y2="${height - bottom}"></line><line class="graphAxis" x1="${left}" y1="${height - bottom}" x2="${width - right}" y2="${height - bottom}"></line><path class="graphLine" d="${path}"></path>${pointsSvg}<text class="graphTitleText" x="${width / 2}" y="${height - 5}" text-anchor="middle">Wind speed (${escapeHtml(info.label)})</text><text class="graphTitleText" x="17" y="${height / 2}" text-anchor="middle" transform="rotate(-90 17 ${height / 2})">Height AGL (m)</text></svg></div></div>`;
+    return `<div class="aloftGraphPanel"><div class="graphTop"><div><strong>Winds aloft graph</strong><p class="muted small" style="margin:4px 0 0">Wind speed versus height AGL for the selected forecast time.</p></div><div class="chips" style="margin-top:0"><span class="chip">Max ${round(maxPoint.speed * info.factor, info.dp)} ${info.label} at ${round(maxPoint.agl * FlightPlanner.FT)} ft</span><span class="chip">${display.length} plotted levels</span></div></div><div class="graphScroll"><svg class="aloftSvg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Wind aloft graph"><path class="graphArea" d="${area}"></path>${grid}<line class="graphAxis" x1="${left}" y1="${top}" x2="${left}" y2="${height - bottom}"></line><line class="graphAxis" x1="${left}" y1="${height - bottom}" x2="${width - right}" y2="${height - bottom}"></line><path class="graphLine" d="${path}"></path>${pointsSvg}<text class="graphTitleText" x="${width / 2}" y="${height - 5}" text-anchor="middle">Wind speed (${escapeHtml(info.label)})</text><text class="graphTitleText" x="17" y="${height / 2}" text-anchor="middle" transform="rotate(-90 17 ${height / 2})">Height AGL (ft)</text></svg></div></div>`;
   }
   function pressureChipHtml(label, value, suffix = "") { return `<span class="chip">${escapeHtml(label)} ${finite(value) ? `${round(value, 1)} hPa` : "—"}${suffix ? ` · ${escapeHtml(suffix)}` : ""}</span>`; }
   function aloftPressureSummaryHtml(time) {
@@ -1305,10 +1255,9 @@
     const rows = aloftRows(points, mode);
     const header = mode === "raw" ? `<tr><th>Level</th><th>Height AGL</th><th>Height MSL</th><th>Wind</th><th>Cloud</th><th>Temp</th><th>Source</th></tr>` : `<tr><th>Target height AGL</th><th>Height MSL</th><th>Wind</th><th>Cloud</th><th>Temp</th><th>Source</th></tr>`;
     const emptyColspan = mode === "raw" ? 7 : 6;
-    el.aloftCard.innerHTML = `<h2>Winds aloft to ${MAX_AGL} m AGL</h2><div class="toolbar"><div class="field time"><label for="aloftTimeSelect">Forecast time</label><select id="aloftTimeSelect">${options}</select></div><div class="field"><label>Pressure levels</label><input readonly value="${escapeHtml(state.aloftLevels.join(", "))} hPa"></div><div class="field"><label>&nbsp;</label><button class="secondary" id="copyCsvBtn" type="button">Copy CSV</button></div><div class="field"><label>&nbsp;</label><button class="secondary" id="openRocketCsvBtn" type="button">OpenRocket CSV</button></div></div>${aloftPressureSummaryHtml(state.selectedAloftTime)}${aloftGraphHtml(points, mode)}<p class="muted small">Model pressure-level forecast data. Heights are AGL from local terrain; arrows show wind direction visually while text/degrees use meteorological wind-from direction.</p><div class="tableWrap"><table><thead>${header}</thead><tbody>${rows || `<tr><td colspan="${emptyColspan}">No aloft rows available for this time/location.</td></tr>`}</tbody></table></div>`;
-    document.getElementById("aloftTimeSelect")?.addEventListener("change", e => { state.selectedAloftTime = e.target.value; renderAloft(); renderLaunchWindow(); });
+    el.aloftCard.innerHTML = `<h2>Winds aloft to 5,000 ft AGL</h2><div class="toolbar"><div class="field time"><label for="aloftTimeSelect">Forecast time</label><select id="aloftTimeSelect">${options}</select></div><div class="field"><label>Pressure levels</label><input readonly value="${escapeHtml(state.aloftLevels.join(", "))} hPa"></div><div class="field"><label>&nbsp;</label><button class="secondary" id="copyCsvBtn" type="button">Copy CSV</button></div></div>${aloftPressureSummaryHtml(state.selectedAloftTime)}${aloftGraphHtml(points, mode)}<p class="muted small">GFS model pressure-level forecast data, not measured winds. Heights use the airfield elevation of 321 ft AMSL; winds are vector-interpolated at the selected step; arrows show wind direction visually while text/degrees use meteorological wind-from direction.</p><div class="tableWrap"><table><thead>${header}</thead><tbody>${rows || `<tr><td colspan="${emptyColspan}">No aloft rows available for this time/location.</td></tr>`}</tbody></table></div>`;
+    document.getElementById("aloftTimeSelect")?.addEventListener("change", e => { state.selectedAloftTime = e.target.value; renderAloft(); });
     document.getElementById("copyCsvBtn")?.addEventListener("click", copyAloftCsv);
-    document.getElementById("openRocketCsvBtn")?.addEventListener("click", downloadOpenRocketCsv);
   }
   function copyAloftCsv() {
     const points = rawAloftPoints(state.selectedAloftTime);
@@ -1317,291 +1266,46 @@
     for (const p of aloftDisplayPoints(points, mode)) {
       const w = windToUser(p.speed);
       const pr = pressureForAloftTime(state.selectedAloftTime);
-      rows.push([state.selectedAloftTime, p.label, round(p.agl), round(p.msl), w.value, w.unit, round(p.dir), dirText(p.dir), round(p.cloud), round(p.temp, 1), finite(pr?.pressureMsl) ? round(pr.pressureMsl, 1) : "", finite(state.surface?.current?.pressure_msl) ? round(state.surface.current.pressure_msl, 1) : "", p.source]);
+      rows.push([state.selectedAloftTime, p.label, round(p.agl * FlightPlanner.FT), round(p.msl * FlightPlanner.FT), w.value, w.unit, round(p.dir), dirText(p.dir), round(p.cloud), round(p.temp, 1), finite(pr?.pressureMsl) ? round(pr.pressureMsl, 1) : "", finite(state.surface?.current?.pressure_msl) ? round(state.surface.current.pressure_msl, 1) : "", p.source]);
     }
-    const header = ["time_local", "level", "height_agl_m", "height_msl_m", "wind_speed", "wind_unit", "wind_from_deg", "wind_from_compass", "cloud_cover_pct", "temp_c", "forecast_msl_pressure_hpa", "current_msl_pressure_hpa", "source"];
+    const header = ["time_local", "level", "height_agl_ft", "height_msl_ft", "wind_speed", "wind_unit", "wind_from_deg", "wind_from_compass", "cloud_cover_pct", "temp_c", "forecast_msl_pressure_hpa", "current_msl_pressure_hpa", "source"];
     const csv = [header, ...rows].map(row => row.map(cell => `"${String(cell ?? "").replaceAll('"', '""')}"`).join(",")).join("\n");
-    navigator.clipboard?.writeText(csv).then(() => showNotice("Copied winds-aloft CSV to clipboard."), () => showNotice("Could not copy CSV in this browser.", "warn"));
-  }
-  function safeFilenamePart(value) { return String(value || "wind_profile").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 60) || "wind_profile"; }
-  function roundedNumber(value, dp = 2) { return finite(value) ? Number(value).toFixed(dp) : ""; }
-  function dedupeByAltitude(rows) {
-    const seen = new Set();
-    return rows.filter(r => finite(r.altitude) && finite(r.velocity) && finite(r.direction)).sort((a, b) => a.altitude - b.altitude).filter(r => { const key = Math.round(r.altitude); if (seen.has(key)) return false; seen.add(key); return true; });
-  }
-  function openRocketRows() {
-    const points = rawAloftPoints(state.selectedAloftTime);
-    const rows = [];
-    const surface = points.find(p => p.source === "surface" && finite(p.speed) && finite(p.dir)) || points.find(p => finite(p.speed) && finite(p.dir) && p.agl >= 0);
-    if (surface) rows.push({ altitude: 0, velocity: surface.speed, direction: surface.dir, stdDev: 0 });
-    for (const p of aloftDisplayPoints(points, el.aloftStepSelect.value)) if (p.agl >= 0 && p.agl <= MAX_AGL) rows.push({ altitude: p.targetAgl ?? p.agl, velocity: p.speed, direction: p.dir, stdDev: 0 });
-    return dedupeByAltitude(rows);
+    navigator.clipboard?.writeText(csv)?.then(() => showNotice("Copied winds-aloft CSV to clipboard."), () => showNotice("Could not copy CSV in this browser.", "warn"));
   }
   function downloadTextFile(filename, text, mime = "text/csv") {
     const blob = new Blob([text], { type: `${mime};charset=utf-8` });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
-  function downloadOpenRocketCsv() {
-    const rows = openRocketRows();
-    if (!rows.length) { showNotice("No valid wind profile rows are available to export.", "warn"); return; }
-    const header = ["altitude", "speed", "direction", "stddev"];
-    const csvRows = rows.map(r => [roundedNumber(r.altitude, 0), roundedNumber(r.velocity, 2), roundedNumber(((r.direction % 360) + 360) % 360, 0), roundedNumber(r.stdDev, 2)]);
-    const csv = [header, ...csvRows].map(row => row.join(",")).join("\n");
-    const loc = safeFilenamePart(locationLabel(state.location));
-    const time = safeFilenamePart(state.selectedAloftTime || "forecast");
-    downloadTextFile(`openrocket_wind_${loc}_${time}.csv`, csv);
-    showNotice(`Downloaded OpenRocket wind CSV with ${rows.length} altitude rows. It uses OpenRocket headers altitude,speed,direction,stddev.`);
-  }
-
-  function isMachXLaunchLocation() { return state.location?.launchSite === "machx"; }
-  function avgNumber(values) { const nums = values.filter(finite); return nums.length ? nums.reduce((sum, value) => sum + value, 0) / nums.length : null; }
-  function maxNumber(values) { const nums = values.filter(finite); return nums.length ? Math.max(...nums) : null; }
-  function minNumber(values) { const nums = values.filter(finite); return nums.length ? Math.min(...nums) : null; }
-  function launchDurationLabel(hours = state.launchWindowDurationHours) { return Number(hours) === 0.5 ? "30 mins" : `${Number(hours)}h`; }
-  function launchForecastDates() { const h = state.surface?.hourly; return h?.time?.length ? [...new Set(h.time.map(t => parseLocalParts(t).date))].sort() : []; }
-  function launchDayLabel(date) {
-    if (!date) return "Best loaded day";
-    const label = formatDay(date);
-    const today = state.surface?.current?.time ? parseLocalParts(state.surface.current.time).date : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(new Date().getDate()).padStart(2, "0")}`;
-    const tomorrow = new Date(`${today}T12:00:00`);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowDate = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, "0")}-${String(tomorrow.getDate()).padStart(2, "0")}`;
-    if (date === today) return `Today · ${label}`;
-    if (date === tomorrowDate) return `Tomorrow · ${label}`;
-    return label;
-  }
-  function selectedLaunchDate() {
-    const dates = launchForecastDates();
-    if (state.launchWindowDate === "auto") return null;
-    if (dates.includes(state.launchWindowDate)) return state.launchWindowDate;
-    state.launchWindowDate = "auto";
-    localStorage.setItem("weatherAloftLaunchDate", "auto");
-    return null;
-  }
-  function launchControlsHtml() {
-    const durationOptions = [["0.5", "30 mins"], ["1", "1h"], ["2", "2h"], ["3", "3h"], ["4", "4h"]].map(([value, label]) => `<option value="${value}"${value === String(state.launchWindowDurationHours) ? " selected" : ""}>${label}</option>`).join("");
-    const selected = selectedLaunchDate() || "auto";
-    const dayOptions = [`<option value="auto"${selected === "auto" ? " selected" : ""}>Best loaded day</option>`, ...launchForecastDates().map(date => `<option value="${escapeHtml(date)}"${date === selected ? " selected" : ""}>${escapeHtml(launchDayLabel(date))}</option>`)].join("");
-    return `<div class="launchControls"><div class="launchDayControl field"><label for="launchDateSelect">Launch day</label><select id="launchDateSelect">${dayOptions}</select></div><div class="launchDurationControl field"><label for="launchDurationSelect">Window length</label><select id="launchDurationSelect">${durationOptions}</select></div></div>`;
-  }
-  function bindLaunchWindowControls() {
-    document.getElementById("launchDurationSelect")?.addEventListener("change", e => { state.launchWindowDurationHours = Number(e.target.value); localStorage.setItem("weatherAloftLaunchDurationHours", String(state.launchWindowDurationHours)); renderLaunchWindow(); });
-    document.getElementById("launchDateSelect")?.addEventListener("change", e => { state.launchWindowDate = e.target.value || "auto"; localStorage.setItem("weatherAloftLaunchDate", state.launchWindowDate); renderLaunchWindow(); });
-  }
-  function minuteOfDayToIso(date, minuteOfDay) { const hh = Math.floor(minuteOfDay / 60); const mm = minuteOfDay % 60; return `${date}T${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`; }
-  function windowTimeLabel(date, startMinuteOfDay, durationHours = state.launchWindowDurationHours) { const durationMinutes = Math.round(Number(durationHours) * 60); return `${formatLocal(minuteOfDayToIso(date, startMinuteOfDay))}–${formatLocal(minuteOfDayToIso(date, startMinuteOfDay + durationMinutes), false)}`; }
-  function worstWeatherInfo(codes) {
-    let result = { penalty: 0, reason: "" };
-    for (const raw of codes) {
-      const code = Number(raw);
-      if (!Number.isFinite(code)) continue;
-      let candidate = { penalty: 0, reason: "" };
-      if (code >= 95) candidate = { penalty: 120, reason: weatherText(code) };
-      else if (code >= 71 && code <= 86) candidate = { penalty: 80, reason: weatherText(code) };
-      else if (code >= 61 && code <= 67) candidate = { penalty: 45, reason: weatherText(code) };
-      else if (code >= 51 && code <= 57) candidate = { penalty: 20, reason: weatherText(code) };
-      else if (code === 45 || code === 48) candidate = { penalty: 35, reason: weatherText(code) };
-      if (candidate.penalty > result.penalty) result = candidate;
+  function configureFlightRefresh() {
+    if (flightRefreshTimer) clearInterval(flightRefreshTimer);
+    flightRefreshTimer = null;
+    if (isNorthWealdLocation() && flightSettings.autoRefresh) {
+      flightRefreshTimer = setInterval(() => { if (isNorthWealdLocation() && !state.isBusy) loadLocation(state.location); }, 30 * 60 * 1000);
     }
-    return result;
   }
-  function vectorShearFromSurface(points) {
-    const valid = points.filter(p => finite(p.agl) && p.agl >= 0 && p.agl <= MAX_AGL && finite(p.speed) && finite(p.dir)).sort((a, b) => a.agl - b.agl);
-    if (valid.length < 2) return null;
-    const base = windToUV(valid[0].speed, valid[0].dir);
-    let maxDiff = 0;
-    for (const p of valid.slice(1)) { const uv = windToUV(p.speed, p.dir); const diff = Math.hypot(uv.u - base.u, uv.v - base.v); if (diff > maxDiff) maxDiff = diff; }
-    return maxDiff;
+  function renderFlightWindow() {
+    if (!isNorthWealdLocation() || !state.surface?.hourly) return;
+    const result = FlightPlanner.calculate(state.surface, flightSettings);
+    FlightPlannerUI.render({ card: el.flightWindowCard, result, fetchedAt: state.fetchedAt, detailDate: state.flightDetailDate,
+      onChange: next => { flightSettings = FlightPlanner.settings(next); localStorage.setItem(FLIGHT_SETTINGS_KEY, JSON.stringify(flightSettings)); configureFlightRefresh(); renderFlightWindow(); },
+      onDetailDate: date => { state.flightDetailDate = date; renderFlightWindow(); },
+      onTime: time => { state.selectedAloftTime = time; renderAloft(); el.aloftCard.scrollIntoView({ behavior: "smooth", block: "start" }); },
+      onDownload: text => downloadTextFile("north-weald-flight-windows.csv", text)
+    });
   }
-  function launchWindowRating(score) { if (score < 25) return "Good"; if (score < LAUNCH_UNUSABLE_SCORE) return "Usable"; if (score < 90) return "Marginal"; return "Poor"; }
-  function isLaunchWindowUsable(candidate) { return finite(candidate?.score) && candidate.score < LAUNCH_UNUSABLE_SCORE; }
-  function launchReasonEntries(candidate) {
-    const b = candidate?.scoreBreakdown || {};
-    const entries = [
-      { key: "rainAmount", label: "Rain amount", penalty: b.rainAmount, detail: `${round(candidate?.rainMm, 2)} mm` },
-      { key: "rainChance", label: "Rain chance", penalty: b.rainChance, detail: `${round(candidate?.popMax)}%` },
-      { key: "surfaceWind", label: "Surface wind", penalty: b.surfaceWind, detail: `${round(msToMphNumber(candidate?.surfaceWindMax), 0)} mph max` },
-      { key: "gusts", label: "Gusts", penalty: b.gusts, detail: `${round(msToMphNumber(candidate?.gustMax), 0)} mph` },
-      { key: "aloftWind", label: "Winds aloft", penalty: b.aloftWind, detail: `${round(msToMphNumber(candidate?.aloftMax), 0)} mph max` },
-      { key: "shear", label: "Wind shear", penalty: b.shear, detail: `${round(msToMphNumber(candidate?.shearMax), 0)} mph` },
-      { key: "cloud", label: "Cloud cover", penalty: b.cloud, detail: `${round(candidate?.cloudAvg)}%` },
-      { key: "visibility", label: "Low visibility", penalty: b.visibility, detail: finite(candidate?.visibilityKm) ? `${round(candidate.visibilityKm, 1)} km` : "—" },
-      { key: "weatherCode", label: "Weather type", penalty: b.weatherCode, detail: candidate?.weatherReason || "Adverse weather code" }
-    ];
-    return entries.filter(x => finite(x.penalty) && x.penalty > 0.05).sort((a, b) => b.penalty - a.penalty);
-  }
-  function launchReasonSummary(candidate, limit = 3) {
-    const entries = launchReasonEntries(candidate);
-    if (!entries.length) return { entries: [], otherPenalty: 0, plain: "No meaningful weather penalties" };
-    const shown = entries.slice(0, limit);
-    const otherPenalty = entries.slice(limit).reduce((sum, x) => sum + x.penalty, 0);
-    const plain = shown.map(x => `${x.label} ${x.detail} (+${round(x.penalty, 0)})`).join(", ") + (otherPenalty >= 0.5 ? `, other factors (+${round(otherPenalty, 0)})` : "");
-    return { entries: shown, otherPenalty, plain };
-  }
-  function launchReasonBoxHtml(candidate) {
-    const reason = launchReasonSummary(candidate, 4);
-    const title = isLaunchWindowUsable(candidate) ? "What contributes to this score" : "Why this score is bad/unusable";
-    const tags = reason.entries.map(x => `<span class="launchReasonTag">${escapeHtml(x.label)}: ${escapeHtml(x.detail)} <b>+${round(x.penalty, 0)}</b></span>`).join("");
-    const other = reason.otherPenalty >= 0.5 ? `<span class="launchReasonTag">Other combined <b>+${round(reason.otherPenalty, 0)}</b></span>` : "";
-    return `<div class="launchReasonBox"><strong>${escapeHtml(title)}</strong><div class="launchReasonList">${tags || `<span class="muted small">No meaningful weather penalties.</span>`}${other}</div></div>`;
-  }
-  function launchReasonCellHtml(candidate) {
-    const reason = launchReasonSummary(candidate, 3);
-    if (!reason.entries.length) return `<div class="scoreReasons muted small">No meaningful penalties</div>`;
-    const lines = reason.entries.map(x => `<span class="scoreReasonLine"><strong>${escapeHtml(x.label)}</strong> · ${escapeHtml(x.detail)} <span class="scoreReasonPenalty">+${round(x.penalty, 0)}</span></span>`).join("");
-    const other = reason.otherPenalty >= 0.5 ? `<span class="scoreReasonLine muted">Other combined <span class="scoreReasonPenalty">+${round(reason.otherPenalty, 0)}</span></span>` : "";
-    return `<div class="scoreReasons">${lines}${other}</div>`;
-  }
-  function hourlyIndexesForWindow(h, date, startStamp, endStamp) {
-    const stamped = h.time.map((time, index) => ({ time, index, stamp: localStamp(time), parts: parseLocalParts(time) })).filter(x => x.parts.date === date);
-    const indexes = stamped.filter(x => x.stamp >= startStamp && x.stamp < endStamp).map(x => x.index);
-    if (indexes.length) return indexes;
-    const midpoint = startStamp + (endStamp - startStamp) / 2;
-    const nearest = stamped.map(x => ({ ...x, diff: Math.abs(x.stamp - midpoint) })).sort((a, b) => a.diff - b.diff)[0];
-    return nearest && nearest.diff <= 60 * 60 * 1000 ? [nearest.index] : [];
-  }
-  function machXLaunchCandidates(dateFilter = selectedLaunchDate()) {
-    const h = state.surface?.hourly;
-    if (!h?.time?.length) return [];
-    const durationHours = Number(state.launchWindowDurationHours || 2);
-    const durationMinutes = Math.round(durationHours * 60);
-    const nowStamp = state.surface?.current?.time ? localStamp(state.surface.current.time) : Date.now();
-    const dates = launchForecastDates().filter(date => !dateFilter || date === dateFilter);
-    const candidates = [];
-    for (const date of dates) {
-      const firstStartMinute = 9 * 60 + 30;
-      const lastStartMinute = 22 * 60 - durationMinutes;
-      if (lastStartMinute < firstStartMinute) continue;
-      for (let startMinute = firstStartMinute; startMinute <= lastStartMinute; startMinute += 30) {
-        const endMinute = startMinute + durationMinutes;
-        const startStamp = localStamp(minuteOfDayToIso(date, startMinute));
-        const endStamp = localStamp(minuteOfDayToIso(date, endMinute));
-        if (endStamp <= nowStamp - 10 * 60 * 1000) continue;
-        const indexes = hourlyIndexesForWindow(h, date, startStamp, endStamp);
-        if (!indexes.length) continue;
-        const rainScale = Math.min(1, durationHours / Math.max(indexes.length, 1));
-        const rainMm = indexes.reduce((sum, i) => sum + Number(h.precipitation?.[i] || 0), 0) * rainScale;
-        const popMax = maxNumber(indexes.map(i => h.precipitation_probability?.[i]));
-        const surfaceWindMax = maxNumber(indexes.map(i => h.wind_speed_10m?.[i]));
-        const surfaceWindAvg = avgNumber(indexes.map(i => h.wind_speed_10m?.[i]));
-        const gustMax = maxNumber(indexes.map(i => h.wind_gusts_10m?.[i]));
-        const cloudAvg = avgNumber(indexes.map(i => h.cloud_cover?.[i]));
-        const visibilityMin = minNumber(indexes.map(i => h.visibility?.[i]));
-        const weatherInfo = worstWeatherInfo(indexes.map(i => h.weather_code?.[i]));
-        const weatherPenalty = weatherInfo.penalty;
-        const aloftMaxByHour = [];
-        const aloftShearByHour = [];
-        for (const i of indexes) {
-          const points = rawAloftPoints(h.time[i]).filter(p => finite(p.speed) && finite(p.dir) && finite(p.agl) && p.agl >= 0 && p.agl <= MAX_AGL);
-          aloftMaxByHour.push(maxNumber(points.map(p => p.speed)));
-          aloftShearByHour.push(vectorShearFromSurface(points));
-        }
-        const aloftMax = maxNumber(aloftMaxByHour);
-        const shearMax = maxNumber(aloftShearByHour);
-        const visibilityKm = finite(visibilityMin) ? visibilityMin / 1000 : null;
-        const scoreBreakdown = {
-          rainAmount: rainMm * 90,
-          rainChance: (popMax || 0) * 0.45,
-          surfaceWind: Math.max(0, (surfaceWindMax || 0) - 5.36) * 5.0,
-          gusts: Math.max(0, (gustMax || 0) - 8.94) * 4.5,
-          aloftWind: Math.max(0, (aloftMax || 0) - 11.18) * 2.2,
-          shear: Math.max(0, (shearMax || 0) - 6.0) * 2.0,
-          cloud: (cloudAvg || 0) * 0.06,
-          visibility: finite(visibilityMin) && visibilityMin < 5000 ? (5000 - visibilityMin) / 120 : 0,
-          weatherCode: weatherPenalty
-        };
-        const score = Object.values(scoreBreakdown).reduce((sum, value) => sum + Number(value || 0), 0);
-        candidates.push({ date, startMinute, endMinute, durationHours, label: windowTimeLabel(date, startMinute, durationHours), score, rating: launchWindowRating(score), rainMm, popMax, surfaceWindMax, surfaceWindAvg, gustMax, cloudAvg, visibilityKm, aloftMax, shearMax, weatherPenalty, weatherReason: weatherInfo.reason, scoreBreakdown });
-      }
-    }
-    return candidates.sort((a, b) => a.score - b.score);
-  }
-  function launchCandidatesChronological(candidates) { return [...candidates].sort((a, b) => a.date !== b.date ? a.date.localeCompare(b.date) : a.startMinute - b.startMinute); }
-  function launchUsableRuns(candidates) {
-    const chronological = launchCandidatesChronological(candidates);
-    const runs = [];
-    let active = null;
-    for (const candidate of chronological) {
-      const usable = isLaunchWindowUsable(candidate);
-      const continues = active && active.date === candidate.date && candidate.startMinute === active.lastStartMinute + 30;
-      if (!usable) { if (active) { active.stopper = continues ? candidate : null; runs.push(active); active = null; } continue; }
-      if (!active || !continues) { if (active) runs.push(active); active = { date: candidate.date, items: [], stopper: null, lastStartMinute: candidate.startMinute }; }
-      active.items.push(candidate);
-      active.lastStartMinute = candidate.startMinute;
-    }
-    if (active) runs.push(active);
-    return runs.map(run => {
-      const start = run.items[0];
-      const end = run.items[run.items.length - 1];
-      const durationMinutes = end.endMinute - start.startMinute;
-      const scores = run.items.map(item => item.score).filter(finite);
-      return { ...run, startMinute: start.startMinute, endMinute: end.endMinute, durationMinutes, avgScore: avgNumber(scores), maxScore: maxNumber(scores), label: `${formatLocal(minuteOfDayToIso(run.date, start.startMinute))}–${formatLocal(minuteOfDayToIso(run.date, end.endMinute), false)}` };
-    }).sort((a, b) => b.durationMinutes !== a.durationMinutes ? b.durationMinutes - a.durationMinutes : ((a.avgScore ?? 9999) - (b.avgScore ?? 9999)) || a.date.localeCompare(b.date) || a.startMinute - b.startMinute);
-  }
-  function compactDuration(minutes) { if (!finite(minutes)) return "—"; const mins = Math.round(minutes); const h = Math.floor(mins / 60); const m = mins % 60; if (h && m) return `${h}h ${m}m`; if (h) return `${h}h`; return `${m}m`; }
-  function launchCandidateRow(c, best, extraLabel = "") {
-    const stop = extraLabel ? `<span class="chip" style="margin-left:6px">${escapeHtml(extraLabel)}</span>` : "";
-    return `<tr class="${c === best ? "bestLaunchRow" : !isLaunchWindowUsable(c) ? "badLaunchRow" : ""}"><td><strong>${escapeHtml(c.label)}</strong>${stop}</td><td>${round(c.score, 0)} · ${escapeHtml(c.rating)}</td><td>${launchReasonCellHtml(c)}</td><td>${round(msToMphNumber(c.surfaceWindAvg), 0)} / ${round(msToMphNumber(c.surfaceWindMax), 0)} mph</td><td>${round(msToMphNumber(c.gustMax), 0)} mph</td><td>${round(msToMphNumber(c.aloftMax), 0)} mph</td><td>${round(msToMphNumber(c.shearMax), 0)} mph</td><td>${round(c.rainMm, 2)} mm · ${round(c.popMax)}%</td><td>${round(c.cloudAvg)}%</td><td>${finite(c.visibilityKm) ? `${round(c.visibilityKm, 1)} km` : "—"}</td></tr>`;
-  }
-  function launchScoreExplanationHtml() {
-    return `<details class="launchScoreExplanation"><summary>How the launch score is calculated</summary><ul><li><strong>Lower is better.</strong> The score starts at 0 and adds weather penalties for the chosen window.</li><li>Biggest penalties come from rain amount, rain probability, strong 10 m wind, strong gusts, strong winds aloft up to 3000 m, and vertical wind shear from the surface.</li><li>Smaller penalties are added for cloud cover and visibility below 5 km. Rain, snow, fog, and thunderstorm weather codes add extra fixed penalties.</li><li>Wind thresholds before penalties start: about <strong>12 mph</strong> surface wind, <strong>20 mph</strong> gusts, and <strong>25 mph</strong> winds aloft.</li><li>Ratings: <strong>Good</strong> &lt;25, <strong>Usable</strong> 25–54, <strong>Marginal/bad</strong> 55–89, <strong>Poor</strong> 90+.</li><li>The <strong>Main score reasons</strong> column shows the largest penalty contributions for each window, including the number of points each factor adds.</li></ul></details>`;
-  }
-  function bestRunForDate(candidates, date) { return launchUsableRuns(candidates.filter(c => c.date === date))[0] || null; }
-  function launchDayOverviewHtml(candidates, best) {
-    const dates = [...new Set(candidates.map(c => c.date))].sort();
-    if (!dates.length) return "";
-    const rows = dates.map(date => {
-      const dayCandidates = candidates.filter(c => c.date === date).sort((a, b) => a.score - b.score);
-      const dayBest = dayCandidates[0];
-      const dayRun = bestRunForDate(candidates, date);
-      const usableCount = dayCandidates.filter(isLaunchWindowUsable).length;
-      return `<tr class="${dayBest === best ? "bestLaunchRow" : ""}"><td><strong>${escapeHtml(launchDayLabel(date))}</strong></td><td>${dayBest ? `${escapeHtml(dayBest.label)} · ${round(dayBest.score, 0)} ${escapeHtml(dayBest.rating)}` : "—"}</td><td>${usableCount}/${dayCandidates.length}</td><td>${dayRun ? `${escapeHtml(dayRun.label)} · ${escapeHtml(compactDuration(dayRun.durationMinutes))}` : "—"}</td></tr>`;
-    }).join("");
-    return `<h3 style="margin-top:14px">Loaded-day overview</h3><div class="tableWrap"><table><thead><tr><th>Day</th><th>Best window</th><th>Usable starts</th><th>Longest usable stretch</th></tr></thead><tbody>${rows}</tbody></table></div>`;
-  }
-  function launchMiniStatsHtml(candidates, bestRun) {
-    const usableCount = candidates.filter(isLaunchWindowUsable).length;
-    const selected = selectedLaunchDate();
-    return `<div class="launchMiniGrid"><div class="launchMiniStat"><span>Launch day</span><strong>${escapeHtml(selected ? launchDayLabel(selected) : "Best loaded day")}</strong></div><div class="launchMiniStat"><span>Usable starts</span><strong>${usableCount} / ${candidates.length}</strong></div><div class="launchMiniStat"><span>Longest usable stretch</span><strong>${escapeHtml(bestRun ? compactDuration(bestRun.durationMinutes) : "None")}</strong></div><div class="launchMiniStat"><span>Bad/marginal starts</span><strong>${candidates.length - usableCount}</strong></div></div>`;
-  }
-  function renderLaunchWindow() {
-    const card = el.launchWindowCard;
-    if (!card) return;
-    if (!isMachXLaunchLocation()) { card.hidden = true; return; }
-    card.hidden = false;
-    const durationLabel = launchDurationLabel();
-    const selectedDate = selectedLaunchDate();
-    const selectedDateLabel = selectedDate ? launchDayLabel(selectedDate) : "best loaded day";
-    const candidates = machXLaunchCandidates(selectedDate);
-    if (!candidates.length) {
-      card.innerHTML = `<div class="launchHeader"><div><h2>MachX launch window</h2><p class="muted small" style="margin:0">Dedicated Mach X view for Campbeltown Airport. Choose a launch day and window length; candidate starts run from 09:30 to 22:00.</p></div>${launchControlsHtml()}</div><p class="muted">No complete ${escapeHtml(durationLabel)} launch windows were found for ${escapeHtml(selectedDateLabel)} between 09:30 and 22:00 in the currently loaded forecast. Increase the forecast length, choose another day, or try again later.</p>${launchScoreExplanationHtml()}`;
-      bindLaunchWindowControls();
-      return;
-    }
-    const best = candidates[0];
-    const usableRuns = launchUsableRuns(candidates);
-    const bestRun = usableRuns[0] || null;
-    const chronological = launchCandidatesChronological(candidates);
-    const allRows = chronological.map(c => launchCandidateRow(c, best)).join("");
-    const dayOverview = selectedDate ? "" : launchDayOverviewHtml(candidates, best);
-    let usableRunHtml = `<div class="launchRunBox"><strong>No usable continuous stretch found for the selected settings.</strong><p class="muted small" style="margin:6px 0 0">Every candidate window is already ${LAUNCH_UNUSABLE_SCORE}+ / marginal or worse. All windows are still listed below for comparison.</p></div>`;
-    const tableCaption = selectedDate ? "All launch windows for selected day · 09:30–22:00" : "All launch windows across loaded days · 09:30–22:00";
-    if (bestRun) {
-      const stopperText = bestRun.stopper ? `The next window, ${escapeHtml(bestRun.stopper.label)}, becomes ${escapeHtml(bestRun.stopper.rating)} (${round(bestRun.stopper.score, 0)}). Main cause: ${escapeHtml(launchReasonSummary(bestRun.stopper, 2).plain)}.` : "No bad/unusable score appears before the end of the loaded forecast range.";
-      const runStart = bestRun.items[0];
-      const runEnd = bestRun.items[bestRun.items.length - 1];
-      usableRunHtml = `<div class="launchRunBox"><strong>Best continuous usable stretch:</strong><div class="launchBestTime" style="font-size:clamp(1.15rem,2.4vw,1.9rem)">${escapeHtml(bestRun.label)}</div><div class="chips"><span class="chip">Total stretch ${escapeHtml(compactDuration(bestRun.durationMinutes))}</span><span class="chip">Checked as ${escapeHtml(durationLabel)} windows</span><span class="chip">Average score ${round(bestRun.avgScore, 0)}</span><span class="chip">Worst usable score ${round(bestRun.maxScore, 0)}</span><span class="chip">First usable start ${escapeHtml(runStart.label)}</span><span class="chip">Last usable start ${escapeHtml(runEnd.label)}</span></div><p class="muted small" style="margin:10px 0 0">${stopperText}</p></div>`;
-    }
-    card.innerHTML = `<div class="launchHeader"><div><h2>MachX launch window</h2><p class="muted small" style="margin:0">${escapeHtml(durationLabel)} launch-window ranking for ${escapeHtml(selectedDateLabel)} · Mach X at Campbeltown Airport · 09:30–22:00</p></div>${launchControlsHtml()}</div><div class="launchBest"><div><span class="chip">Best individual window</span><div class="launchBestTime">${escapeHtml(best.label)}</div><div class="chips"><span class="chip">Launch day ${escapeHtml(launchDayLabel(best.date))}</span><span class="chip">Length ${escapeHtml(durationLabel)}</span><span class="chip">10 m wind avg/max ${round(msToMphNumber(best.surfaceWindAvg), 0)}/${round(msToMphNumber(best.surfaceWindMax), 0)} mph</span><span class="chip">Gust max ${round(msToMphNumber(best.gustMax), 0)} mph</span><span class="chip">Aloft max ${round(msToMphNumber(best.aloftMax), 0)} mph</span><span class="chip">Shear from surface ${round(msToMphNumber(best.shearMax), 0)} mph</span><span class="chip">Rain ${round(best.rainMm, 2)} mm · ${round(best.popMax)}%</span></div></div><div class="launchScoreBox" title="Lower score is better"><span class="muted small">Suitability</span><span class="launchScoreValue">${round(best.score, 0)}</span><strong>${escapeHtml(best.rating)}</strong></div></div>${launchReasonBoxHtml(best)}${launchMiniStatsHtml(candidates, bestRun)}${usableRunHtml}<p class="muted small">Weather-ranking helper only. Every complete candidate window is listed in chronological order from 09:30 to 22:00, at 30-minute start intervals. The continuous-stretch summary still identifies where conditions first become bad/unusable. Still use your normal range, NOTAM, airspace, landowner, recovery, and club procedures.</p>${launchScoreExplanationHtml()}${dayOverview}<h3 style="margin-top:14px">${escapeHtml(tableCaption)}</h3><div class="tableWrap"><table><thead><tr><th>Window</th><th>Score</th><th>Main score reasons</th><th>10 m wind avg/max</th><th>Gust max</th><th>Aloft max</th><th>Shear</th><th>Rain / chance</th><th>Cloud</th><th>Visibility</th></tr></thead><tbody>${allRows}</tbody></table></div>`;
-    bindLaunchWindowControls();
-  }
+  // Re-evaluate future starts and freshness even when automatic fetching is disabled.
+  setInterval(() => {
+    if (!document.hidden && isNorthWealdLocation() && !state.isBusy && !el.flightWindowCard.contains(document.activeElement)) renderFlightWindow();
+  }, 60 * 1000);
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden || !isNorthWealdLocation()) return;
+    if (flightSettings.autoRefresh && state.fetchedAt && Date.now() - state.fetchedAt > 30 * 60 * 1000 && !state.isBusy) loadLocation(state.location);
+    else renderFlightWindow();
+  });
 
   function renderHourly() {
     const h = state.surface?.hourly;
@@ -1625,7 +1329,7 @@
     el.hourlyCard.innerHTML = `<h2>Next forecast hours</h2><p class="muted small" style="margin:-5px 0 12px">Weather icons, daylight, rain chance, cloud cover, wind direction and visibility for the next 36 forecast hours.</p><div class="tableWrap"><table class="hourlyTable"><thead><tr><th>Time</th><th>Temperature</th><th>Weather</th><th>Rain</th><th>10 m wind</th><th>Gust</th><th>Cloud</th><th>Visibility</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   }
 
-  function savedLocationFromButton(button) { return { name: button.dataset.savedName, admin2: button.dataset.savedAdmin2, admin1: button.dataset.savedAdmin1, country: button.dataset.savedCountry, latitude: Number(button.dataset.savedLat), longitude: Number(button.dataset.savedLon), elevation: null, launchSite: button.dataset.launchSite || "" }; }
+  function savedLocationFromButton(button) { return { name: button.dataset.savedName, admin2: button.dataset.savedAdmin2, admin1: button.dataset.savedAdmin1, country: button.dataset.savedCountry, latitude: Number(button.dataset.savedLat), longitude: Number(button.dataset.savedLon), elevation: button.dataset.savedElevation ? Number(button.dataset.savedElevation) : null }; }
   renderUserFavorites();
   document.querySelectorAll(".savedLocationBtn:not(.userSaved)").forEach(button => button.addEventListener("click", () => activateSavedLocationButton(button)));
   el.searchForm.addEventListener("submit", event => { event.preventDefault(); stopLiveWeather(); searchLocation(el.locationInput.value); });
@@ -1634,7 +1338,7 @@
   el.refreshBtn.addEventListener("click", () => { if (state.location) loadLocation(state.location); });
   el.themeBtn.addEventListener("click", () => setSunMode(!document.body.classList.contains("sunMode")));
   el.windUnitSelect.addEventListener("change", () => { localStorage.setItem("weatherDashboardWindUnit", el.windUnitSelect.value); renderAll(); });
-  el.aloftStepSelect.addEventListener("change", () => { renderAloft(); renderLaunchWindow(); });
+  el.aloftStepSelect.addEventListener("change", renderAloft);
   el.daysSelect.addEventListener("change", () => { localStorage.setItem("weatherDashboardForecastDays", el.daysSelect.value); if (state.location) loadLocation(state.location); });
 
   function stopLiveWeather() {
@@ -1681,7 +1385,7 @@
     const lat = latValue === null || latValue.trim() === "" ? NaN : Number(latValue);
     const lon = lonValue === null || lonValue.trim() === "" ? NaN : Number(lonValue);
     if (Number.isFinite(lat) && Number.isFinite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
-      const loc = { latitude: lat, longitude: lon, name: params.get("name") || `${lat}, ${lon}`, country: "", admin1: "", admin2: "", elevation: null, launchSite: params.get("launchSite") || "" };
+      const loc = { latitude: lat, longitude: lon, name: params.get("name") || `${lat}, ${lon}`, country: "", admin1: "", admin2: "", elevation: null };
       el.locationInput.value = loc.name;
       loadLocation(loc);
       return;

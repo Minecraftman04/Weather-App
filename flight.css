@@ -1,0 +1,41 @@
+#flightWindowCard, #aloftCard { grid-column: 1 / -1; }
+.flightFieldset { margin: 18px 0; padding: 16px; min-width: 0; border: 1px solid var(--border); border-radius: 16px; }
+.flightFieldset legend { padding: 0 8px; font-size: 1rem; font-weight: 850; }
+.flightControlGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr)); gap: 14px; align-items: start; }
+.flightControlGrid > *, .flightControlGrid .field { min-width: 0; }
+.flightControlGrid input, .flightControlGrid select { width: 100%; }
+.flightControlGrid .field { margin-top: 6px; }
+.flightToggle { display: flex; align-items: flex-start; gap: 9px; color: var(--text); font-size: 0.9rem; line-height: 1.4; cursor: pointer; }
+.flightToggle input[type="checkbox"] { flex: 0 0 auto; width: 19px; min-height: 19px; height: 19px; margin: 1px 0 0; padding: 0; accent-color: var(--accent); }
+.flightToggleStack { display: grid; gap: 20px; padding-top: 8px; }
+.flightWeekdays, .flightDates { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0; }
+.flightWeekdays .flightToggle { border: 1px solid var(--border); border-radius: 10px; padding: 9px 11px; }
+.flightDates .flightBlocked { border-color: #f87171; background: rgba(248,113,113,0.16); color: var(--text); }
+.flightEmpty { margin: 16px 0; padding: 18px; border: 1px solid var(--border); border-left: 4px solid var(--warn); border-radius: 12px; }
+.flightExplanation, .flightDetails { margin: 16px 0; padding: 14px; border: 1px solid var(--border); border-radius: 14px; }
+.flightExplanation summary, .flightDetails summary { cursor: pointer; font-weight: 800; }
+.flightExplanation p { line-height: 1.6; color: var(--muted); }
+.flightDetails .tableWrap { margin-top: 14px; }
+.flightDetails p { margin-bottom: 0; }
+.flightScoreBox { gap: 8px; }
+.flightScoreValue small { font-size: 1rem; font-weight: 650; }
+.flightLegend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 0.85rem; margin: 12px 0; }
+.flightSurface { color: #22d3ee; }.flightGust { color: #fbbf24; }.flightAloft { color: #a78bfa; }
+.flightTimeline { width: 100%; min-width: 900px; height: auto; display: block; }
+.flightLine { fill: none; stroke-width: 2; }
+.flightLine-surface { stroke: #22d3ee; }.flightLine-gust { stroke: #fbbf24; }.flightLine-aloft { stroke: #a78bfa; }
+.flightLimit { fill: none; stroke: var(--muted); stroke-dasharray: 5 5; stroke-width: 1; }
+#flightWindowCard th, #flightWindowCard td { white-space: normal; min-width: 100px; max-width: 320px; vertical-align: top; overflow-wrap: anywhere; }
+#flightWindowCard table { min-width: 930px; }
+#flightWindowCard caption { text-align: left; font-weight: 850; color: var(--text); padding: 12px 0; }
+.flightExcludedRow td { background: rgba(248,113,113,0.05); color: var(--muted); }
+body.sunMode .flightScoreBox { background: rgba(0,138,122,0.05); }
+body.sunMode .flightSurface { color: #006778; } body.sunMode .flightGust { color: #835300; } body.sunMode .flightAloft { color: #6340a6; }
+body.sunMode .flightLine-surface { stroke: #006778; } body.sunMode .flightLine-gust { stroke: #835300; } body.sunMode .flightLine-aloft { stroke: #6340a6; }
+@media (max-width: 600px) {
+  .flightFieldset { padding: 12px; }
+  .flightControlGrid { grid-template-columns: minmax(0, 1fr); }
+  .flightDates button { flex: 1 1 125px; white-space: normal; }
+  .flightBestTime { font-size: 1.5rem; }
+  .flightWeekdays { gap: 6px; }
+}
